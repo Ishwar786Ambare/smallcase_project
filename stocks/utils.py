@@ -42,6 +42,36 @@ INDIAN_STOCKS = {
     'MAZDOCK.NS': 'Mazagon Dock Shipbuilding',
 }
 
+# Indian market indices
+INDIAN_INDICES = {
+    '^NSEI': 'Nifty 50',
+    '^NSEBANK': 'Nifty Bank',
+    '^BSESN': 'Sensex',
+}
+
+
+def fetch_index_historical_data(index_symbol, start_date):
+    """
+    Fetch historical data for an index
+    Returns list of {date, value} dictionaries
+    """
+    try:
+        index = yf.Ticker(index_symbol)
+        data = index.history(start=start_date)
+        
+        if not data.empty:
+            result = []
+            for date, row in data.iterrows():
+                result.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'value': float(row['Close'])
+                })
+            return result
+        return []
+    except Exception as e:
+        print(f"Error fetching index data for {index_symbol}: {e}")
+        return []
+
 
 def fetch_stock_price(symbol):
     """

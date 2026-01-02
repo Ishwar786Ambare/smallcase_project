@@ -1,6 +1,11 @@
 {% extends 'stocks/base.j2' %}
 {% block title %}{{ basket.name }} - Details{% endblock %}
 
+{% block header %}
+    {{ super() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block css %}
     .container {
         max-width: 1200px;
@@ -322,6 +327,17 @@
         </div>
     </div>
 
+    <!-- Performance Comparison Chart -->
+    <div class="chart-section" style="margin: 30px 0; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h2 class="section-title" style="margin-bottom: 20px;">📈 Performance Comparison</h2>
+        <div style="position: relative; height: 400px;">
+            <canvas id="performanceChart"></canvas>
+        </div>
+        <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9em;">
+            Comparing your basket's returns with Nifty 50 index
+        </div>
+    </div>
+
     <h2 class="section-title">Stock Holdings ({{ items|length }} stocks)</h2>
 
     <table class="stocks-table">
@@ -570,5 +586,97 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+// Load and render performance comparison chart
+async function loadPerformanceChart() {
+    try {
+        const response = await fetch('/basket/{{ basket.id }}/chart-data/');
+        const data = await response.json();
+        
+        if (data.success) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        {
+                            label: data.datasets.basket.label,
+                            data: data.datasets.basket.data,
+                            borderColor: data.datasets.basket.color,
+                            backgroundColor: data.datasets.basket.color + '20',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: data.datasets.nifty.label,
+                            data: data.datasets.nifty.data,
+                            borderColor: data.datasets.nifty.color,
+                            backgroundColor: data.datasets.nifty.color + '20',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        title: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(1) + '%';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Returns (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading chart:', error);
+        document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: #999;">Unable to load chart data</p>';
+    }
+}
+
+// Load chart when page is ready
+document.addEventListener('DOMContentLoaded', loadPerformanceChart);
 </script>
 {% endblock %}

@@ -147,6 +147,68 @@ def basket_detail(request, basket_id):
     return render(request, 'stocks/basket_detail.j2', context)
 
 
+def basket_chart_data(request, basket_id):
+    """API endpoint to get basket performance vs indices data for chart"""
+    from django.http import JsonResponse
+    from .utils import fetch_index_historical_data, INDIAN_INDICES
+    from datetime import datetime, timedelta
+    
+    basket = get_object_or_404(Basket, id=basket_id)
+    
+    # Get start date (from basket creation or 30 days ago, whichever is more recent)
+    start_date = basket.created_at.date()
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).date()
+    start_date = max(start_date, thirty_days_ago)
+    
+    # Fetch Nifty 50 data
+    nifty_data = fetch_index_historical_data('^NSEI', start_date)
+    
+    # Normalize to percentage change from start
+    if nifty_data:
+        nifty_start_value = nifty_data[0]['value']
+        nifty_normalized = [
+            {
+                'date': item['date'],
+                'value': ((item['value'] - nifty_start_value) / nifty_start_value) * 100
+            }
+            for item in nifty_data
+        ]
+    else:
+        nifty_normalized = []
+    
+    # Calculate basket performance (simplified - assuming constant investment)
+    # In real scenario, you'd track daily basket values
+    basket_start_value = float(basket.investment_amount)
+    basket_current_value = basket.get_total_value()
+    basket_return = ((basket_current_value - basket_start_value) / basket_start_value) * 100
+    
+    # Create basket data points matching index dates
+    basket_normalized = [
+        {
+            'date': item['date'],
+            'value': basket_return  # Simplified: showing current return for all dates
+        }
+        for item in nifty_normalized
+    ]
+    
+    return JsonResponse({
+        'success': True,
+        'labels': [item['date'] for item in nifty_normalized],
+        'datasets': {
+            'basket': {
+                'label': basket.name,
+                'data': [item['value'] for item in basket_normalized],
+                'color': 'rgb(102, 126, 234)'
+            },
+            'nifty': {
+                'label': 'Nifty 50',
+                'data': [item['value'] for item in nifty_normalized],
+                'color': 'rgb(255, 99, 132)'
+            }
+        }
+    })
+
+
 def basket_delete(request, basket_id):
     """Delete a basket"""
     basket = get_object_or_404(Basket, id=basket_id)

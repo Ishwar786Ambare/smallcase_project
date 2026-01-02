@@ -9,6 +9,7 @@ urlpatterns = [
     path('update-prices/', views.update_prices, name='update_prices'),
     path('basket/create/', views.basket_create, name='basket_create'),
     path('basket/<int:basket_id>/', views.basket_detail, name='basket_detail'),
+    path('basket/<int:basket_id>/chart-data/', views.basket_chart_data, name='basket_chart_data'),
     path('basket/<int:basket_id>/delete/', views.basket_delete, name='basket_delete'),
     path('basket/<int:basket_id>/duplicate/', views.basket_duplicate, name='basket_duplicate'),
     path('basket/<int:basket_id>/edit-investment/', views.basket_edit_investment, name='basket_edit_investment'),
