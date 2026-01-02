@@ -256,7 +256,7 @@
                     <div class="basket-info">
                         <strong>P/L:</strong>
                         <span class="{% if basket.get_profit_loss() >= 0 %}positive{% else %}negative{% endif %}">
-                            ₹{{ basket.get_profit_loss() }} ({{ basket.get_profit_loss_percentage() }}%)
+                            ₹{{ basket.get_profit_loss() }} ({{ basket.get_profit_loss_percentage()|round(2) }}%)
                         </span>
                     </div>
                     <div class="basket-info">

@@ -492,12 +492,12 @@ function saveEdit(itemId, field) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Update all items in the table (since weights are rebalanced)
+            // Update all items in the table
             data.items.forEach(itemData => {
                 const itemRow = document.querySelector(`tr[data-item-id="${itemData.id}"]`);
                 if (itemRow) {
                     itemRow.querySelector('.weight-value').textContent = itemData.weight_percentage.toFixed(2);
-                    itemRow.querySelector('.quantity-value').textContent = itemData.quantity.toFixed(4);
+                    itemRow.querySelector('.quantity-value').textContent = itemData.quantity;
                     itemRow.querySelector('.allocated-amount').textContent = '₹' + itemData.allocated_amount.toFixed(2);
                     itemRow.querySelector('.current-value').textContent = '₹' + itemData.current_value.toFixed(2);
                     
@@ -507,10 +507,36 @@ function saveEdit(itemId, field) {
                 }
             });
             
+            // Update investment amount if it changed
+            if (data.investment_amount) {
+                const investmentElement = document.querySelector('.stats-grid .stat-card:first-child .stat-value');
+                if (investmentElement) {
+                    investmentElement.textContent = '₹' + data.investment_amount.toFixed(2);
+                }
+            }
+            
+            // Update portfolio stats
+            if (data.total_current_value !== undefined) {
+                document.getElementById('total-current-value').textContent = '₹' + data.total_current_value.toFixed(2);
+                
+                const plElement = document.getElementById('total-profit-loss');
+                plElement.textContent = '₹' + data.total_profit_loss.toFixed(2);
+                plElement.className = 'stat-value ' + (data.total_profit_loss >= 0 ? 'positive' : 'negative');
+                
+                const plPercentElement = document.getElementById('profit-loss-percentage');
+                plPercentElement.textContent = data.profit_loss_percentage.toFixed(2) + '%';
+                plPercentElement.className = 'stat-value ' + (data.profit_loss_percentage >= 0 ? 'positive' : 'negative');
+            }
+            
             // Hide edit mode for the current item
             cancelEdit(itemId, field);
             
-            showMessage('Updated successfully! Other stocks rebalanced to maintain 100% total.', 'success');
+            // Update message based on edit type
+            if (field === 'quantity') {
+                showMessage('Quantity updated! Investment amount and all weights recalculated.', 'success');
+            } else {
+                showMessage('Updated successfully! Other stocks rebalanced to maintain 100% total.', 'success');
+            }
         } else {
             showMessage(data.error || 'Failed to update', 'error');
         }

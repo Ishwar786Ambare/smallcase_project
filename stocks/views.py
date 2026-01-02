@@ -254,64 +254,32 @@ def basket_item_edit(request, item_id):
                             other_item.save()
                 
             elif update_type == 'quantity':
-                # Update quantity, recalculate weight (quantity must be whole number)
+                # Update quantity, recalculate all weights (quantity must be whole number)
+                # Other stocks keep their quantities, only weights change
                 new_quantity = int(request.POST.get('quantity'))
                 
                 if new_quantity <= 0:
                     return JsonResponse({'success': False, 'error': 'Quantity must be positive'})
                 
+                # Update this item's quantity and allocated amount
                 item.quantity = new_quantity
-                # Calculate new allocated amount based on quantity
                 item.allocated_amount = new_quantity * item.purchase_price
-                # Calculate new weight based on allocated amount
-                new_weight = (item.allocated_amount / basket.investment_amount) * 100
-                
-                if new_weight > 100:
-                    return JsonResponse({'success': False, 'error': 'Quantity too large - would exceed 100% weight'})
-                
-                old_weight = item.weight_percentage
-                item.weight_percentage = new_weight
                 item.save()
                 
-                # Rebalance other items
-                other_items = basket.items.exclude(id=item.id)
+                # Calculate total allocated amount across all stocks (including updated one)
+                all_items = basket.items.all()
+                total_allocated = sum(Decimal(str(basket_item.quantity)) * basket_item.purchase_price 
+                                     for basket_item in all_items)
                 
-                if other_items.exists():
-                    # Calculate total weight of other items
-                    other_total_weight = sum(other_item.weight_percentage for other_item in other_items)
-                    
-                    # Remaining weight for other stocks
-                    remaining_weight = Decimal('100') - new_weight
-                    
-                    if remaining_weight < 0:
-                        return JsonResponse({'success': False, 'error': 'Total weight cannot exceed 100%'})
-                    
-                    # Redistribute remaining weight proportionally among other items
-                    if other_total_weight > 0:
-                        for other_item in other_items:
-                            proportion = other_item.weight_percentage / other_total_weight
-                            other_item.weight_percentage = remaining_weight * proportion
-                            other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            # Round to whole number
-                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
-                            # Adjust allocated amount based on whole quantity
-                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
-                            # Recalculate actual weight based on whole quantity
-                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
-                            other_item.save()
-                    else:
-                        # If other items had 0 weight, distribute equally
-                        equal_weight = remaining_weight / len(other_items)
-                        for other_item in other_items:
-                            other_item.weight_percentage = equal_weight
-                            other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            # Round to whole number
-                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
-                            # Adjust allocated amount based on whole quantity
-                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
-                            # Recalculate actual weight based on whole quantity
-                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
-                            other_item.save()
+                # Update basket investment amount to match actual holdings
+                basket.investment_amount = total_allocated
+                basket.save()
+                
+                # Recalculate weights for all items based on new total
+                for basket_item in all_items:
+                    # Keep quantity as is, just recalculate weight
+                    basket_item.weight_percentage = (basket_item.allocated_amount / total_allocated) * 100 if total_allocated > 0 else 0
+                    basket_item.save()
             
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid update type'})
@@ -323,16 +291,25 @@ def basket_item_edit(request, item_id):
                 items_data.append({
                     'id': basket_item.id,
                     'weight_percentage': float(basket_item.weight_percentage),
-                    'quantity': float(basket_item.quantity),
+                    'quantity': int(basket_item.quantity),
                     'allocated_amount': float(basket_item.allocated_amount),
                     'current_value': basket_item.get_current_value(),
                     'profit_loss': basket_item.get_profit_loss(),
                 })
             
-            # Return updated values for all items
+            # Calculate updated portfolio metrics
+            total_current_value = basket.get_total_value()
+            total_profit_loss = basket.get_profit_loss()
+            profit_loss_percentage = basket.get_profit_loss_percentage()
+            
+            # Return updated values for all items and basket
             return JsonResponse({
                 'success': True,
                 'items': items_data,
+                'investment_amount': float(basket.investment_amount),
+                'total_current_value': total_current_value,
+                'total_profit_loss': total_profit_loss,
+                'profit_loss_percentage': profit_loss_percentage,
             })
             
         except Exception as e:
