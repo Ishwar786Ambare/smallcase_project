@@ -1,0 +1,320 @@
+{% extends 'stocks/base.j2' %}
+{% block title %}{{ basket.name }} - Performance Analysis{% endblock %}
+
+{% block css %}
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    h1 {
+        color: #333;
+        font-size: 2.2em;
+    }
+
+    .intro-text {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .intro-text h2 {
+        margin: 0 0 10px 0;
+        font-size: 1.5em;
+    }
+
+    .intro-text p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 1.1em;
+    }
+
+    .performance-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        margin: 30px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .performance-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .performance-table th {
+        padding: 18px 15px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 1em;
+    }
+
+    .performance-table th:first-child {
+        border-top-left-radius: 12px;
+    }
+
+    .performance-table th:last-child {
+        border-top-right-radius: 12px;
+    }
+
+    .performance-table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+
+    .performance-table tbody tr:hover {
+        background: #f8f9fa;
+        transform: scale(1.01);
+    }
+
+    .performance-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .performance-table td {
+        padding: 18px 15px;
+        font-size: 1em;
+    }
+
+    .period-cell {
+        font-weight: 600;
+        color: #333;
+        font-size: 1.1em;
+    }
+
+    .value-cell {
+        font-size: 1.3em;
+        font-weight: 700;
+    }
+
+    .return-cell {
+        font-weight: 600;
+    }
+
+    .positive {
+        color: #10b981;
+    }
+
+    .negative {
+        color: #ef4444;
+    }
+
+    .winner-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    .badge-win {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-lose {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin: 30px 0;
+    }
+
+    .summary-card {
+        padding: 25px;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+    }
+
+    .summary-card h3 {
+        margin: 0 0 15px 0;
+        font-size: 1.1em;
+        opacity: 0.9;
+    }
+
+    .summary-card .big-number {
+        font-size: 2.5em;
+        font-weight: 700;
+        margin: 10px 0;
+    }
+
+    .summary-card .subtitle {
+        font-size: 0.95em;
+        opacity: 0.85;
+    }
+
+    .card-basket {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-nifty {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .card-comparison {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .actions {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 1.8em;
+        }
+
+        .performance-table {
+            font-size: 0.9em;
+        }
+
+        .value-cell {
+            font-size: 1.1em;
+        }
+    }
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>📊 Performance Analysis: {{ basket.name }}</h1>
+        </div>
+        <div class="actions">
+            <a href="{{ url('basket_detail', args=[basket.id]) }}" class="btn btn-primary">← Back to Basket</a>
+            <a href="{{ url('home') }}" class="btn btn-secondary">Home</a>
+        </div>
+    </div>
+
+    <div class="intro-text">
+        <h2>💰 Historical Investment Performance</h2>
+        <p>If you invested <strong>₹100</strong> at different points in the past, what would it be worth <strong>TODAY</strong>?</p>
+    </div>
+
+    {% if performance_data %}
+    <table class="performance-table">
+        <thead>
+            <tr>
+                <th>Investment Period</th>
+                <th>Your Basket Today</th>
+                <th>Basket Return</th>
+                <th>Nifty 50 Today</th>
+                <th>Nifty Return</th>
+                <th>Performance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in performance_data %}
+            <tr>
+                <td class="period-cell">{{ data.period }} Ago</td>
+                <td class="value-cell {% if data.basket_value >= 100 %}positive{% else %}negative{% endif %}">
+                    ₹{{ data.basket_value }}
+                </td>
+                <td class="return-cell {% if data.basket_return >= 0 %}positive{% else %}negative{% endif %}">
+                    {{ data.basket_return|round(2) >= 0 and '+' or '' }}{{ data.basket_return }}%
+                </td>
+                <td class="value-cell {% if data.nifty_value >= 100 %}positive{% else %}negative{% endif %}">
+                    ₹{{ data.nifty_value }}
+                </td>
+                <td class="return-cell {% if data.nifty_return >= 0 %}positive{% else %}negative{% endif %}">
+                    {{ data.nifty_return|round(2) >= 0 and '+' or '' }}{{ data.nifty_return }}%
+                </td>
+                <td>
+                    {% if data.basket_wins %}
+                        <span class="winner-badge badge-win">🎯 Ahead by ₹{{ data.outperformance|abs }}</span>
+                    {% else %}
+                        <span class="winner-badge badge-lose">📉 Behind by ₹{{ data.outperformance|abs }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary-cards">
+        <div class="summary-card card-basket">
+            <h3>Best Basket Performance</h3>
+            {% set best = performance_data|sort(attribute='basket_value', reverse=true)|first %}
+            <div class="big-number">₹{{ best.basket_value }}</div>
+            <div class="subtitle">{{ best.period }} investment period<br>+{{ best.basket_return }}% return</div>
+        </div>
+        <div class="summary-card card-nifty">
+            <h3>Best Nifty Performance</h3>
+            {% set best_nifty = performance_data|sort(attribute='nifty_value', reverse=true)|first %}
+            <div class="big-number">₹{{ best_nifty.nifty_value }}</div>
+            <div class="subtitle">{{ best_nifty.period }} investment period<br>+{{ best_nifty.nifty_return }}% return</div>
+        </div>
+        <div class="summary-card card-comparison">
+            <h3>Win Rate</h3>
+            {% set wins = performance_data|selectattr('basket_wins', 'equalto', true)|list|length %}
+            {% set total = performance_data|length %}
+            <div class="big-number">{{ (wins / total * 100)|round(0)|int }}%</div>
+            <div class="subtitle">Your basket beat Nifty in<br>{{ wins }} out of {{ total }} periods</div>
+        </div>
+    </div>
+
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #999;">
+        <p style="font-size: 1.2em;">⏳ Loading performance data...</p>
+        <p>This may take a few moments as we fetch historical data.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

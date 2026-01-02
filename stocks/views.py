@@ -240,6 +240,69 @@ def basket_chart_data(request, basket_id):
     })
 
 
+def basket_performance(request, basket_id):
+    """Performance analysis page showing historical returns"""
+    from datetime import datetime, timedelta
+    from .utils import fetch_index_historical_data, calculate_basket_historical_performance
+    
+    basket = get_object_or_404(Basket, id=basket_id)
+    
+    # Define time periods to analyze
+    periods = [
+        {'code': '1m', 'label': '1 Month', 'days': 30},
+        {'code': '3m', 'label': '3 Months', 'days': 90},
+        {'code': '6m', 'label': '6 Months', 'days': 180},
+        {'code': '1y', 'label': '1 Year', 'days': 365},
+        {'code': '2y', 'label': '2 Years', 'days': 730},
+        {'code': '3y', 'label': '3 Years', 'days': 1095},
+        {'code': '5y', 'label': '5 Years', 'days': 1825},
+    ]
+    
+    performance_data = []
+    
+    for period in periods:
+        # Fetch historical data for this period
+        basket_hist = calculate_basket_historical_performance(basket, period['code'])
+        nifty_hist = fetch_index_historical_data('^NSEI', period['code'])
+        
+        if basket_hist and nifty_hist:
+            # Get values: first (past) and last (today)
+            basket_start = basket_hist[0]['value']
+            basket_end = basket_hist[-1]['value']
+            
+            nifty_start = nifty_hist[0]['value']
+            nifty_end = nifty_hist[-1]['value']
+            
+            # Calculate indexed values (₹100 invested then → ₹X today)
+            basket_value = (basket_end / basket_start) * 100
+            nifty_value = (nifty_end / nifty_start) * 100
+            
+            # Calculate returns
+            basket_return = basket_value - 100
+            nifty_return = nifty_value - 100
+            
+            # Determine who performed better
+            outperformance = basket_value - nifty_value
+            
+            performance_data.append({
+                'period': period['label'],
+                'code': period['code'],
+                'basket_value': round(basket_value, 2),
+                'nifty_value': round(nifty_value, 2),
+                'basket_return': round(basket_return, 2),
+                'nifty_return': round(nifty_return, 2),
+                'outperformance': round(outperformance, 2),
+                'basket_wins': basket_value > nifty_value
+            })
+    
+    context = {
+        'basket': basket,
+        'performance_data': performance_data,
+    }
+    
+    return render(request, 'stocks/basket_performance.j2', context)
+
+
 def basket_delete(request, basket_id):
     """Delete a basket"""
     basket = get_object_or_404(Basket, id=basket_id)
