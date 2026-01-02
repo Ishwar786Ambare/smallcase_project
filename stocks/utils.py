@@ -49,19 +49,40 @@ INDIAN_INDICES = {
     '^BSESN': 'Sensex',
 }
 
+# Time period mappings for yfinance
+TIME_PERIODS = {
+    '1d': '1d',
+    '7d': '7d',
+    '1m': '1mo',
+    '3m': '3mo',
+    '6m': '6mo',
+    '1y': '1y',
+    '3y': '3y',
+    '5y': '5y',
+}
 
-def fetch_index_historical_data(index_symbol, start_date):
+
+def fetch_index_historical_data(index_symbol, period='1mo'):
     """
     Fetch historical data for an index
-    Returns list of {date, value} dictionaries
+    
+    Args:
+        index_symbol: Index ticker (e.g., '^NSEI' for Nifty 50)
+        period: Time period - '1d', '7d', '1m', '3m', '6m', '1y', '3y', '5y'
+    
+    Returns:
+        List of {date, value} dictionaries
     """
     try:
-        index = yf.Ticker(index_symbol)
-        data = index.history(start=start_date)
+        # Convert our period format to yfinance format
+        yf_period = TIME_PERIODS.get(period, '1mo')
         
-        if not data.empty:
+        index = yf.Ticker(index_symbol)
+        df = yf.download(index_symbol, period=yf_period, progress=False)
+        
+        if not df.empty:
             result = []
-            for date, row in data.iterrows():
+            for date, row in df.iterrows():
                 result.append({
                     'date': date.strftime('%Y-%m-%d'),
                     'value': float(row['Close'])
@@ -71,6 +92,103 @@ def fetch_index_historical_data(index_symbol, start_date):
     except Exception as e:
         print(f"Error fetching index data for {index_symbol}: {e}")
         return []
+
+
+def fetch_stock_historical_data(symbol, period='1mo'):
+    """
+    Fetch historical data for a stock
+    
+    Args:
+        symbol: Stock ticker (e.g., 'RELIANCE.NS')
+        period: Time period - '1d', '7d', '1m', '3m', '6m', '1y', '3y', '5y'
+    
+    Returns:
+        List of {date, value} dictionaries
+    """
+    try:
+        yf_period = TIME_PERIODS.get(period, '1mo')
+        
+        stock = yf.Ticker(symbol)
+        df = yf.download(symbol, period=yf_period, progress=False)
+        
+        if not df.empty:
+            result = []
+            for date, row in df.iterrows():
+                result.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'value': float(row['Close'])
+                })
+            return result
+        return []
+    except Exception as e:
+        print(f"Error fetching stock data for {symbol}: {e}")
+        return []
+
+
+def calculate_basket_historical_performance(basket, period='1mo'):
+    """
+    Calculate historical performance of a basket
+    
+    Args:
+        basket: Basket model instance
+        period: Time period
+    
+    Returns:
+        List of {date, value} dictionaries representing basket value over time
+    """
+    from .models import BasketItem
+    
+    items = basket.items.all()
+    if not items:
+        return []
+    
+    # Fetch historical data for all stocks in basket
+    stock_histories = {}
+    for item in items:
+        hist_data = fetch_stock_historical_data(item.stock.symbol, period)
+        if hist_data:
+            stock_histories[item.stock.symbol] = hist_data
+    
+    if not stock_histories:
+        return []
+    
+    # Get common dates across all stocks
+    all_dates = set()
+    for hist_data in stock_histories.values():
+        for point in hist_data:
+            all_dates.add(point['date'])
+    
+    common_dates = sorted(all_dates)
+    
+    # Calculate basket value for each date
+    basket_performance = []
+    
+    for date in common_dates:
+        total_value = 0
+        all_stocks_have_data = True
+        
+        for item in items:
+            symbol = item.stock.symbol
+            if symbol in stock_histories:
+                # Find price for this date
+                date_data = next((d for d in stock_histories[symbol] if d['date'] == date), None)
+                if date_data:
+                    stock_value = float(item.quantity) * date_data['value']
+                    total_value += stock_value
+                else:
+                    all_stocks_have_data = False
+                    break
+            else:
+                all_stocks_have_data = False
+                break
+        
+        if all_stocks_have_data:
+            basket_performance.append({
+                'date': date,
+                'value': total_value
+            })
+    
+    return basket_performance
 
 
 def fetch_stock_price(symbol):

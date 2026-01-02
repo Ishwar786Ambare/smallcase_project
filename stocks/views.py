@@ -150,20 +150,31 @@ def basket_detail(request, basket_id):
 def basket_chart_data(request, basket_id):
     """API endpoint to get basket performance vs indices data for chart"""
     from django.http import JsonResponse
-    from .utils import fetch_index_historical_data, INDIAN_INDICES
-    from datetime import datetime, timedelta
+    from .utils import fetch_index_historical_data, calculate_basket_historical_performance, INDIAN_INDICES
     
     basket = get_object_or_404(Basket, id=basket_id)
     
-    # Get start date (from basket creation or 30 days ago, whichever is more recent)
-    start_date = basket.created_at.date()
-    thirty_days_ago = (datetime.now() - timedelta(days=30)).date()
-    start_date = max(start_date, thirty_days_ago)
+    # Get period from request, default to 1 month
+    period = request.GET.get('period', '1m')
     
-    # Fetch Nifty 50 data
-    nifty_data = fetch_index_historical_data('^NSEI', start_date)
+    # Validate period
+    valid_periods = ['1d', '7d', '1m', '3m', '6m', '1y', '3y', '5y']
+    if period not in valid_periods:
+        period = '1m'
     
-    # Normalize to percentage change from start
+    # Fetch Nifty 50 historical data
+    nifty_data = fetch_index_historical_data('^NSEI', period)
+    
+    # Fetch basket historical performance
+    basket_data = calculate_basket_historical_performance(basket, period)
+    
+    if not nifty_data or not basket_data:
+        return JsonResponse({
+            'success': False,
+            'error': 'Unable to fetch historical data'
+        })
+    
+    # Normalize both to percentage change from start
     if nifty_data:
         nifty_start_value = nifty_data[0]['value']
         nifty_normalized = [
@@ -176,33 +187,40 @@ def basket_chart_data(request, basket_id):
     else:
         nifty_normalized = []
     
-    # Calculate basket performance (simplified - assuming constant investment)
-    # In real scenario, you'd track daily basket values
-    basket_start_value = float(basket.investment_amount)
-    basket_current_value = basket.get_total_value()
-    basket_return = ((basket_current_value - basket_start_value) / basket_start_value) * 100
+    if basket_data:
+        basket_start_value = basket_data[0]['value']
+        basket_normalized = [
+            {
+                'date': item['date'],
+                'value': ((item['value'] - basket_start_value) / basket_start_value) * 100
+            }
+            for item in basket_data
+        ]
+    else:
+        basket_normalized = []
     
-    # Create basket data points matching index dates
-    basket_normalized = [
-        {
-            'date': item['date'],
-            'value': basket_return  # Simplified: showing current return for all dates
-        }
-        for item in nifty_normalized
-    ]
+    # Align dates (use dates where both have data)
+    nifty_dates = {item['date']: item['value'] for item in nifty_normalized}
+    basket_dates = {item['date']: item['value'] for item in basket_normalized}
+    common_dates = sorted(set(nifty_dates.keys()) & set(basket_dates.keys()))
+    
+    # Build aligned datasets
+    aligned_nifty = [nifty_dates[date] for date in common_dates]
+    aligned_basket = [basket_dates[date] for date in common_dates]
     
     return JsonResponse({
         'success': True,
-        'labels': [item['date'] for item in nifty_normalized],
+        'period': period,
+        'labels': common_dates,
         'datasets': {
             'basket': {
                 'label': basket.name,
-                'data': [item['value'] for item in basket_normalized],
+                'data': aligned_basket,
                 'color': 'rgb(102, 126, 234)'
             },
             'nifty': {
                 'label': 'Nifty 50',
-                'data': [item['value'] for item in nifty_normalized],
+                'data': aligned_nifty,
                 'color': 'rgb(255, 99, 132)'
             }
         }
