@@ -1,295 +1,545 @@
-<!-- stocks/templates/stocks/basket_detail.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ basket.name }} - Details</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends 'stocks/base.j2' %}
+{% block title %}{{ basket.name }} - Details{% endblock %}
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+{% block css %}
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        padding: 40px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
+    h1 {
+        color: #333;
+        font-size: 2.2em;
+    }
 
-        h1 {
-            color: #333;
-            font-size: 2.2em;
-        }
+    .description {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 1.05em;
+    }
 
-        .description {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 1.05em;
-        }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+    }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
 
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+    .stat-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+        margin-bottom: 10px;
+    }
 
-        .stat-label {
-            font-size: 0.9em;
-            opacity: 0.9;
-            margin-bottom: 10px;
-        }
+    .stat-value {
+        font-size: 1.8em;
+        font-weight: bold;
+    }
 
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-        }
+    .positive {
+        color: #4ade80;
+    }
 
-        .positive {
-            color: #4ade80;
-        }
+    .negative {
+        color: #f87171;
+    }
 
-        .negative {
-            color: #f87171;
-        }
+    .btn {
+        padding: 12px 25px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1em;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
 
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-        }
+    .btn-primary {
+        background: #667eea;
+        color: white;
+    }
 
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
+    .btn-primary:hover {
+        background: #5568d3;
+        transform: translateY(-2px);
+    }
 
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-        }
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
 
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
+    .btn-danger:hover {
+        background: #dc2626;
+    }
 
-        .btn-danger:hover {
-            background: #dc2626;
-        }
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 0.85em;
+    }
 
-        .section-title {
-            font-size: 1.6em;
-            color: #333;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
+    .btn-success {
+        background: #10b981;
+        color: white;
+    }
 
-        .stocks-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
+    .btn-success:hover {
+        background: #059669;
+    }
 
-        .stocks-table th {
-            background: #667eea;
-            color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-        }
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
 
-        .stocks-table td {
-            padding: 15px;
-            border-bottom: 1px solid #e5e7eb;
-        }
+    .btn-secondary:hover {
+        background: #4b5563;
+    }
 
-        .stocks-table tr:hover {
-            background: #f3f4f6;
-        }
+    .section-title {
+        font-size: 1.6em;
+        color: #333;
+        margin-bottom: 20px;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 10px;
+    }
 
-        .stocks-table tr:last-child td {
-            border-bottom: none;
-        }
+    .stocks-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
 
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
+    .stocks-table th {
+        background: #667eea;
+        color: white;
+        padding: 15px;
+        text-align: left;
+        font-weight: 600;
+    }
 
-        .badge-equal {
-            background: #dbeafe;
-            color: #1e40af;
-        }
+    .stocks-table td {
+        padding: 15px;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-        .actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 30px;
-        }
+    .stocks-table tr:hover {
+        background: #f3f4f6;
+    }
 
-        .info-box {
-            background: #f0f9ff;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
+    .stocks-table tr:last-child td {
+        border-bottom: none;
+    }
 
-        .info-box h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
+    .badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
 
-        .info-box p {
-            color: #666;
-            line-height: 1.6;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <div>
-                <h1>📊 {{ basket.name }}</h1>
-                {% if basket.description %}
-                <p class="description">{{ basket.description }}</p>
-                {% endif %}
-            </div>
-            <div class="actions">
-                <a href="{{ url('home') }}" class="btn btn-primary">← Back to Home</a>
-                <a href="{{ url('basket_delete', args=[basket.id]) }}" class="btn btn-danger"
-                   onclick="return confirm('Are you sure you want to delete this basket?')">
-                    Delete Basket
-                </a>
-            </div>
+    .badge-equal {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+
+    .info-box {
+        background: #f0f9ff;
+        border-left: 4px solid #667eea;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    .info-box h3 {
+        color: #333;
+        margin-bottom: 10px;
+    }
+
+    .info-box p {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    /* Edit mode styles */
+    .editable-cell {
+        position: relative;
+    }
+
+    .edit-input {
+        width: 80px;
+        padding: 6px 10px;
+        border: 2px solid #667eea;
+        border-radius: 6px;
+        font-size: 0.95em;
+        text-align: center;
+    }
+
+    .edit-input:focus {
+        outline: none;
+        border-color: #5568d3;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .edit-actions {
+        display: flex;
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+    .display-value {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .display-value:hover {
+        background: #f3f4f6;
+    }
+
+    .edit-icon {
+        margin-left: 5px;
+        color: #667eea;
+        font-size: 0.85em;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .display-value:hover .edit-icon {
+        opacity: 1;
+    }
+
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .alert {
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-left: 4px solid #ef4444;
+    }
+
+    .alert-success {
+        background: #d1fae5;
+        color: #065f46;
+        border-left: 4px solid #10b981;
+    }
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>📊 {{ basket.name }}</h1>
+            {% if basket.description %}
+            <p class="description">{{ basket.description }}</p>
+            {% endif %}
         </div>
-
-        <div class="info-box">
-            <h3>Equal Weight Strategy</h3>
-            <p>
-                This basket uses an equal-weight allocation strategy, meaning each stock receives
-                {{ items.0.weight_percentage }}% of your total investment.
-                This approach ensures balanced exposure across all selected stocks regardless of their market capitalization.
-            </p>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Initial Investment</div>
-                <div class="stat-value">₹{{ basket.investment_amount }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Current Value</div>
-                <div class="stat-value">₹{{ total_current_value|round(2) }}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Profit/Loss</div>
-                <div class="stat-value {% if total_profit_loss %}positive{% else %}negative{% endif %}">
-                    ₹{{ total_profit_loss }}
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Return %</div>
-                <div class="stat-value {% if profit_loss_percentage >= 0 %}positive{% else %}negative{% endif %}">
-                    {{ profit_loss_percentage }}%
-                </div>
-            </div>
-        </div>
-
-        <h2 class="section-title">Stock Holdings ({{ items|length }} stocks)</h2>
-
-        <table class="stocks-table">
-            <thead>
-                <tr>
-                    <th>Stock</th>
-                    <th>Weight</th>
-                    <th>Quantity</th>
-                    <th>Purchase Price</th>
-                    <th>Current Price</th>
-                    <th>Invested Amount</th>
-                    <th>Current Value</th>
-                    <th>P/L</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>
-                        <strong>{{ item.stock.symbol }}</strong><br>
-                        <small style="color: #666;">{{ item.stock.name }}</small>
-                    </td>
-                    <td>
-                        <span class="badge badge-equal">{{ item.weight_percentage }}%</span>
-                    </td>
-                    <td>{{ item.quantity }}</td>
-                    <td>₹{{ item.purchase_price }}</td>
-                    <td>
-                        {% if item.stock.current_price %}
-                            ₹{{ item.stock.current_price }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    <td>₹{{ item.allocated_amount }}</td>
-                    <td>₹{{ item.get_current_value()|round(2) }}</td>
-                    <td class="{% if item.get_profit_loss %}positive{% else %}negative{% endif %}">
-                        ₹{{ item.get_profit_loss()|round(2) }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-        <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 10px;">
-            <p style="color: #666; font-size: 0.95em;">
-                <strong>Note:</strong> Stock prices are fetched from Yahoo Finance and may have a slight delay.
-                Quantities are calculated to maintain equal weight distribution across all stocks in the basket.
-                Created on: {{ basket.created_at }}
-            </p>
+        <div class="actions">
+            <a href="{{ url('home') }}" class="btn btn-primary">← Back to Home</a>
+            <a href="{{ url('basket_delete', args=[basket.id]) }}" class="btn btn-danger"
+               onclick="return confirm('Are you sure you want to delete this basket?')">
+                Delete Basket
+            </a>
         </div>
     </div>
-</body>
-</html>
+
+    <div id="message-container"></div>
+
+    <div class="info-box">
+        <h3>Equal Weight Strategy</h3>
+        <p>
+            This basket uses an equal-weight allocation strategy. You can now <strong>edit the weight or quantity</strong>
+            of individual stocks by clicking on the values in the table below. When you change the weight, the quantity
+            will automatically adjust, and vice versa.
+        </p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Initial Investment</div>
+            <div class="stat-value">₹{{ basket.investment_amount }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Current Value</div>
+            <div class="stat-value">₹{{ total_current_value|round(2) }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Profit/Loss</div>
+            <div class="stat-value {% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
+                ₹{{ total_profit_loss }}
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Return %</div>
+            <div class="stat-value {% if profit_loss_percentage >= 0 %}positive{% else %}negative{% endif %}">
+                {{ profit_loss_percentage }}%
+            </div>
+        </div>
+    </div>
+
+    <h2 class="section-title">Stock Holdings ({{ items|length }} stocks)</h2>
+
+    <table class="stocks-table">
+        <thead>
+            <tr>
+                <th>Stock</th>
+                <th>Weight %</th>
+                <th>Quantity</th>
+                <th>Purchase Price</th>
+                <th>Current Price</th>
+                <th>Invested Amount</th>
+                <th>Current Value</th>
+                <th>P/L</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr data-item-id="{{ item.id }}">
+                <td>
+                    <strong>{{ item.stock.symbol }}</strong><br>
+                    <small style="color: #666;">{{ item.stock.name }}</small>
+                </td>
+                <td class="editable-cell weight-cell">
+                    <div class="display-mode">
+                        <span class="display-value" onclick="enableEdit({{ item.id }}, 'weight')">
+                            <span class="weight-value">{{ item.weight_percentage }}</span>%
+                            <span class="edit-icon">✏️</span>
+                        </span>
+                    </div>
+                    <div class="edit-mode" style="display: none;">
+                        <input type="number" step="0.01" class="edit-input weight-input" 
+                               value="{{ item.weight_percentage }}" min="0.01" max="100">
+                        <div class="edit-actions">
+                            <button class="btn btn-success btn-small" onclick="saveEdit({{ item.id }}, 'weight')">✓</button>
+                            <button class="btn btn-secondary btn-small" onclick="cancelEdit({{ item.id }}, 'weight')">✗</button>
+                        </div>
+                    </div>
+                </td>
+                <td class="editable-cell quantity-cell">
+                    <div class="display-mode">
+                        <span class="display-value" onclick="enableEdit({{ item.id }}, 'quantity')">
+                            <span class="quantity-value">{{ item.quantity }}</span>
+                            <span class="edit-icon">✏️</span>
+                        </span>
+                    </div>
+                    <div class="edit-mode" style="display: none;">
+                        <input type="number" step="0.0001" class="edit-input quantity-input" 
+                               value="{{ item.quantity }}" min="0.0001">
+                        <div class="edit-actions">
+                            <button class="btn btn-success btn-small" onclick="saveEdit({{ item.id }}, 'quantity')">✓</button>
+                            <button class="btn btn-secondary btn-small" onclick="cancelEdit({{ item.id }}, 'quantity')">✗</button>
+                        </div>
+                    </div>
+                </td>
+                <td>₹{{ item.purchase_price }}</td>
+                <td>
+                    {% if item.stock.current_price %}
+                        ₹{{ item.stock.current_price }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td class="allocated-amount">₹{{ item.allocated_amount }}</td>
+                <td class="current-value">₹{{ item.get_current_value()|round(2) }}</td>
+                <td class="profit-loss {% if item.get_profit_loss() >= 0 %}positive{% else %}negative{% endif %}">
+                    ₹{{ item.get_profit_loss()|round(2) }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 10px;">
+        <p style="color: #666; font-size: 0.95em;">
+            <strong>Note:</strong> Stock prices are fetched from Yahoo Finance and may have a slight delay.
+            Click on the weight or quantity values to edit them. When you change one, the other will automatically adjust.
+            Created on: {{ basket.created_at }}
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+function showMessage(message, type) {
+    const container = document.getElementById('message-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    container.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+function enableEdit(itemId, field) {
+    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const cell = row.querySelector(`.${field}-cell`);
+    
+    // Hide display, show edit
+    cell.querySelector('.display-mode').style.display = 'none';
+    cell.querySelector('.edit-mode').style.display = 'block';
+    
+    // Focus the input
+    cell.querySelector('.edit-input').focus();
+    cell.querySelector('.edit-input').select();
+}
+
+function cancelEdit(itemId, field) {
+    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const cell = row.querySelector(`.${field}-cell`);
+    
+    // Show display, hide edit
+    cell.querySelector('.display-mode').style.display = 'block';
+    cell.querySelector('.edit-mode').style.display = 'none';
+}
+
+function saveEdit(itemId, field) {
+    const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+    const cell = row.querySelector(`.${field}-cell`);
+    const input = cell.querySelector('.edit-input');
+    const newValue = parseFloat(input.value);
+    
+    if (isNaN(newValue) || newValue <= 0) {
+        showMessage('Please enter a valid positive number', 'error');
+        return;
+    }
+    
+    // Show loading state
+    row.classList.add('loading');
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('update_type', field);
+    if (field === 'weight') {
+        formData.append('weight_percentage', newValue);
+    } else {
+        formData.append('quantity', newValue);
+    }
+    
+    // Send AJAX request
+    fetch(`/basket-item/${itemId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update all items in the table (since weights are rebalanced)
+            data.items.forEach(itemData => {
+                const itemRow = document.querySelector(`tr[data-item-id="${itemData.id}"]`);
+                if (itemRow) {
+                    itemRow.querySelector('.weight-value').textContent = itemData.weight_percentage.toFixed(2);
+                    itemRow.querySelector('.quantity-value').textContent = itemData.quantity.toFixed(4);
+                    itemRow.querySelector('.allocated-amount').textContent = '₹' + itemData.allocated_amount.toFixed(2);
+                    itemRow.querySelector('.current-value').textContent = '₹' + itemData.current_value.toFixed(2);
+                    
+                    const plCell = itemRow.querySelector('.profit-loss');
+                    plCell.textContent = '₹' + itemData.profit_loss.toFixed(2);
+                    plCell.className = 'profit-loss ' + (itemData.profit_loss >= 0 ? 'positive' : 'negative');
+                }
+            });
+            
+            // Hide edit mode for the current item
+            cancelEdit(itemId, field);
+            
+            showMessage('Updated successfully! Other stocks rebalanced to maintain 100% total.', 'success');
+        } else {
+            showMessage(data.error || 'Failed to update', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('An error occurred while updating', 'error');
+    })
+    .finally(() => {
+        row.classList.remove('loading');
+    });
+}
+
+// Allow Enter key to save, Escape to cancel
+document.addEventListener('keydown', function(e) {
+    const activeInput = document.activeElement;
+    if (activeInput.classList.contains('edit-input')) {
+        const cell = activeInput.closest('.editable-cell');
+        const row = cell.closest('tr');
+        const itemId = row.dataset.itemId;
+        const field = cell.classList.contains('weight-cell') ? 'weight' : 'quantity';
+        
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveEdit(itemId, field);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEdit(itemId, field);
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -248,8 +248,8 @@
         </div>
 
         <div class="form-group">
-            <label>Select Stocks *</label>
-            <div class="selected-count">
+            <label>Select Stocks * (Minimum 2 stocks required)</label>
+            <div class="selected-count" id="selectedCount">
                 Selected: <span id="count">0</span> stocks
             </div>
 
@@ -283,7 +283,7 @@
                     </p>
                 {% endif %}
             </div>
-            <div class="helper-text">Each stock will have equal weight in your basket</div>
+            <div class="helper-text">Each stock will have equal weight in your basket. Select at least 2 stocks.</div>
         </div>
 
         <div class="actions">
@@ -300,7 +300,25 @@
         console.log('Updating count');
         const checked = document.querySelectorAll('input[name="stocks"]:checked').length;
         document.getElementById('count').textContent = checked;
+        
+        // Visual feedback for minimum requirement
+        const countDisplay = document.getElementById('selectedCount');
+        if (checked < 2) {
+            countDisplay.style.background = '#ef4444';
+        } else {
+            countDisplay.style.background = '#667eea';
+        }
     }
+    
+    // Form validation before submit
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const checked = document.querySelectorAll('input[name="stocks"]:checked').length;
+        if (checked < 2) {
+            e.preventDefault();
+            alert('Please select at least 2 stocks for your basket.');
+            return false;
+        }
+    });
 
     function filterStocks() {
         console.log('Filtering stocks');
