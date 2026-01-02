@@ -322,13 +322,12 @@
     });
 
     function filterStocks() {
-        console.log('Filtering stocks');
         const searchTerm = document.getElementById('searchStock').value.toLowerCase();
         const stockItems = document.querySelectorAll('.stock-checkbox');
 
         stockItems.forEach(item => {
-            const name = item.getAttribute('data-name');
-            const symbol = item.getAttribute('data-symbol');
+            const name = item.getAttribute('data-name').toLowerCase();
+            const symbol = item.getAttribute('data-symbol').toLowerCase();
 
             if (name.includes(searchTerm) || symbol.includes(searchTerm)) {
                 item.style.display = 'flex';

@@ -38,7 +38,8 @@ INDIAN_STOCKS = {
     'PRICOLLTD.NS': 'Pricol',
     'THYROCARE.NS': 'Thyrocare Technologies',
     'UNITDSPR.NS': 'United Spirits',
-    'TARIL.NS': 'Transformers & Rectifiers'
+    'TARIL.NS': 'Transformers & Rectifiers',
+    'MAZDOCK.NS': 'Mazagon Dock Shipbuilding',
 }
 
 
@@ -59,14 +60,37 @@ def fetch_stock_price(symbol):
 
 
 def update_stock_prices():
-    """Update prices for all stocks in database"""
+    """Update prices for all stocks in database (with 5-minute cache)"""
+    from datetime import datetime, timedelta
+    from django.utils import timezone
+    
     stocks = Stock.objects.all()
+    updated_count = 0
+    
     for stock in stocks:
-        price = fetch_stock_price(stock.symbol)
-        if price:
-            stock.current_price = Decimal(str(price))
-            stock.save()
-    return stocks.count()
+        try:
+            # Only update if price is old (more than 5 minutes) or missing
+            should_update = False
+            if not stock.current_price:
+                should_update = True
+            elif stock.last_updated and stock.last_updated < timezone.now() - timedelta(minutes=5):
+                should_update = True
+            else:
+                # Price exists and is fresh (less than 5 minutes old)
+                should_update = False
+            
+            if should_update:
+                price = fetch_stock_price(stock.symbol)
+                if price:
+                    stock.current_price = Decimal(str(price))
+                    stock.save()  # This will auto-update last_updated due to auto_now=True
+                    updated_count += 1
+        except Exception as e:
+            print(f"Error updating {stock.symbol}: {e}")
+            continue
+    
+    print(f"Updated {updated_count} stock prices")
+    return updated_count
 
 
 def populate_indian_stocks():

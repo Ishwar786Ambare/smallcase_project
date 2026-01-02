@@ -1,7 +1,7 @@
 from django.test import TestCase
 
 # Create your tests here.
-data = [{'UNITDSPR.NS': 'United Spirits'}, {'TARIL.NS': 'Transformers & Rectifiers'}]
+data = [{'UNITDSPR.NS': 'United Spirits'}, {'TARIL.NS': 'Transformers & Rectifiers'}, {'MAZDOCK.NS': 'Mazagon Dock Shipbuilding'}]
 import yfinance as yf
 
 for item in data:
