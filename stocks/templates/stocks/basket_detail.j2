@@ -301,21 +301,36 @@
     <div class="stats-grid">
         <div class="stat-card">
             <div class="stat-label">Initial Investment</div>
-            <div class="stat-value">₹{{ basket.investment_amount }}</div>
+            <div class="stat-value">
+                <div class="display-mode" id="investment-display">
+                    <span class="display-value" onclick="enableInvestmentEdit()">
+                        ₹<span id="investment-value">{{ basket.investment_amount }}</span>
+                        <span class="edit-icon">✏️</span>
+                    </span>
+                </div>
+                <div class="edit-mode" id="investment-edit" style="display: none;">
+                    <input type="number" id="investment-input" class="edit-input" 
+                           value="{{ basket.investment_amount }}" min="1000" step="0.01" style="width: 150px;">
+                    <div class="edit-actions">
+                        <button class="btn btn-success btn-small" onclick="saveInvestmentEdit()">✓</button>
+                        <button class="btn btn-secondary btn-small" onclick="cancelInvestmentEdit()">✗</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Current Value</div>
-            <div class="stat-value">₹{{ total_current_value|round(2) }}</div>
+            <div class="stat-value" id="total-current-value">₹{{ total_current_value|round(2) }}</div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Profit/Loss</div>
-            <div class="stat-value {% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-value {% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}" id="total-profit-loss">
                 ₹{{ total_profit_loss }}
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-label">Return %</div>
-            <div class="stat-value {% if profit_loss_percentage >= 0 %}positive{% else %}negative{% endif %}">
+            <div class="stat-value {% if profit_loss_percentage >= 0 %}positive{% else %}negative{% endif %}" id="profit-loss-percentage">
                 {{ profit_loss_percentage }}%
             </div>
         </div>
@@ -362,13 +377,13 @@
                 <td class="editable-cell quantity-cell">
                     <div class="display-mode">
                         <span class="display-value" onclick="enableEdit({{ item.id }}, 'quantity')">
-                            <span class="quantity-value">{{ item.quantity }}</span>
+                            <span class="quantity-value">{{ item.quantity|int }}</span>
                             <span class="edit-icon">✏️</span>
                         </span>
                     </div>
                     <div class="edit-mode" style="display: none;">
-                        <input type="number" step="0.0001" class="edit-input quantity-input" 
-                               value="{{ item.quantity }}" min="0.0001">
+                        <input type="number" step="1" class="edit-input quantity-input" 
+                               value="{{ item.quantity|int }}" min="1">
                         <div class="edit-actions">
                             <button class="btn btn-success btn-small" onclick="saveEdit({{ item.id }}, 'quantity')">✓</button>
                             <button class="btn btn-secondary btn-small" onclick="cancelEdit({{ item.id }}, 'quantity')">✗</button>
@@ -523,10 +538,105 @@ function saveEdit(itemId, field) {
     });
 }
 
+
+// Investment amount editing functions
+function enableInvestmentEdit() {
+    document.getElementById('investment-display').style.display = 'none';
+    document.getElementById('investment-edit').style.display = 'block';
+    document.getElementById('investment-input').focus();
+    document.getElementById('investment-input').select();
+}
+
+function cancelInvestmentEdit() {
+    document.getElementById('investment-display').style.display = 'block';
+    document.getElementById('investment-edit').style.display = 'none';
+}
+
+function saveInvestmentEdit() {
+    const newInvestment = parseFloat(document.getElementById('investment-input').value);
+    
+    if (isNaN(newInvestment) || newInvestment <= 0) {
+        showMessage('Please enter a valid positive amount', 'error');
+        return;
+    }
+    
+    const basketId = {{ basket.id }};
+    const formData = new FormData();
+    formData.append('investment_amount', newInvestment);
+    
+    // Show loading
+    document.body.style.cursor = 'wait';
+    
+    fetch(`/basket/${basketId}/edit-investment/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken,
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update investment amount display
+            document.getElementById('investment-value').textContent = data.investment_amount.toFixed(2);
+            
+            // Update all item rows
+            data.items.forEach(itemData => {
+                const itemRow = document.querySelector(`tr[data-item-id="${itemData.id}"]`);
+                if (itemRow) {
+                    itemRow.querySelector('.weight-value').textContent = itemData.weight_percentage.toFixed(2);
+                    itemRow.querySelector('.quantity-value').textContent = itemData.quantity;
+                    itemRow.querySelector('.allocated-amount').textContent = '₹' + itemData.allocated_amount.toFixed(2);
+                    itemRow.querySelector('.current-value').textContent = '₹' + itemData.current_value.toFixed(2);
+                    
+                    const plCell = itemRow.querySelector('.profit-loss');
+                    plCell.textContent = '₹' + itemData.profit_loss.toFixed(2);
+                    plCell.className = 'profit-loss ' + (itemData.profit_loss >= 0 ? 'positive' : 'negative');
+                }
+            });
+            
+            // Update total stats
+            document.getElementById('total-current-value').textContent = '₹' + data.total_current_value.toFixed(2);
+            
+            const plElement = document.getElementById('total-profit-loss');
+            plElement.textContent = '₹' + data.total_profit_loss.toFixed(2);
+            plElement.className = 'stat-value ' + (data.total_profit_loss >= 0 ? 'positive' : 'negative');
+            
+            const plPercentElement = document.getElementById('profit-loss-percentage');
+            plPercentElement.textContent = data.profit_loss_percentage.toFixed(2) + '%';
+            plPercentElement.className = 'stat-value ' + (data.profit_loss_percentage >= 0 ? 'positive' : 'negative');
+            
+            cancelInvestmentEdit();
+            showMessage('Investment amount updated! All stocks rebalanced.', 'success');
+        } else {
+            showMessage(data.error || 'Failed to update investment amount', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('An error occurred while updating', 'error');
+    })
+    .finally(() => {
+        document.body.style.cursor = 'default';
+    });
+}
+
 // Allow Enter key to save, Escape to cancel
 document.addEventListener('keydown', function(e) {
     const activeInput = document.activeElement;
-    if (activeInput.classList.contains('edit-input')) {
+    
+    // Handle investment amount editing
+    if (activeInput.id === 'investment-input') {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveInvestmentEdit();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelInvestmentEdit();
+        }
+    }
+    // Handle stock item editing
+    else if (activeInput.classList.contains('edit-input')) {
         const cell = activeInput.closest('.editable-cell');
         const row = cell.closest('tr');
         const itemId = row.dataset.itemId;

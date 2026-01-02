@@ -187,7 +187,12 @@ def basket_item_edit(request, item_id):
                     # Only one stock in basket, just update it
                     item.weight_percentage = new_weight
                     item.allocated_amount = (new_weight / 100) * basket.investment_amount
-                    item.quantity = item.allocated_amount / item.purchase_price
+                    # Round to whole number
+                    item.quantity = int(item.allocated_amount / item.purchase_price)
+                    # Adjust allocated amount based on whole quantity
+                    item.allocated_amount = item.quantity * item.purchase_price
+                    # Recalculate actual weight based on whole quantity
+                    item.weight_percentage = (item.allocated_amount / basket.investment_amount) * 100
                     item.save()
                 else:
                     # Calculate total weight of other items
@@ -202,7 +207,12 @@ def basket_item_edit(request, item_id):
                     # Update current item
                     item.weight_percentage = new_weight
                     item.allocated_amount = (new_weight / 100) * basket.investment_amount
-                    item.quantity = item.allocated_amount / item.purchase_price
+                    # Round to whole number
+                    item.quantity = int(item.allocated_amount / item.purchase_price)
+                    # Adjust allocated amount based on whole quantity
+                    item.allocated_amount = item.quantity * item.purchase_price
+                    # Recalculate actual weight based on whole quantity
+                    item.weight_percentage = (item.allocated_amount / basket.investment_amount) * 100
                     item.save()
                     
                     # Redistribute remaining weight proportionally among other items
@@ -212,7 +222,12 @@ def basket_item_edit(request, item_id):
                             proportion = other_item.weight_percentage / other_total_weight
                             other_item.weight_percentage = remaining_weight * proportion
                             other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            other_item.quantity = other_item.allocated_amount / other_item.purchase_price
+                            # Round to whole number
+                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
+                            # Adjust allocated amount based on whole quantity
+                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
+                            # Recalculate actual weight based on whole quantity
+                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
                             other_item.save()
                     else:
                         # If other items had 0 weight, distribute equally
@@ -220,12 +235,17 @@ def basket_item_edit(request, item_id):
                         for other_item in other_items:
                             other_item.weight_percentage = equal_weight
                             other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            other_item.quantity = other_item.allocated_amount / other_item.purchase_price
+                            # Round to whole number
+                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
+                            # Adjust allocated amount based on whole quantity
+                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
+                            # Recalculate actual weight based on whole quantity
+                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
                             other_item.save()
                 
             elif update_type == 'quantity':
-                # Update quantity, recalculate weight
-                new_quantity = Decimal(request.POST.get('quantity'))
+                # Update quantity, recalculate weight (quantity must be whole number)
+                new_quantity = int(request.POST.get('quantity'))
                 
                 if new_quantity <= 0:
                     return JsonResponse({'success': False, 'error': 'Quantity must be positive'})
@@ -262,7 +282,12 @@ def basket_item_edit(request, item_id):
                             proportion = other_item.weight_percentage / other_total_weight
                             other_item.weight_percentage = remaining_weight * proportion
                             other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            other_item.quantity = other_item.allocated_amount / other_item.purchase_price
+                            # Round to whole number
+                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
+                            # Adjust allocated amount based on whole quantity
+                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
+                            # Recalculate actual weight based on whole quantity
+                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
                             other_item.save()
                     else:
                         # If other items had 0 weight, distribute equally
@@ -270,7 +295,12 @@ def basket_item_edit(request, item_id):
                         for other_item in other_items:
                             other_item.weight_percentage = equal_weight
                             other_item.allocated_amount = (other_item.weight_percentage / 100) * basket.investment_amount
-                            other_item.quantity = other_item.allocated_amount / other_item.purchase_price
+                            # Round to whole number
+                            other_item.quantity = int(other_item.allocated_amount / other_item.purchase_price)
+                            # Adjust allocated amount based on whole quantity
+                            other_item.allocated_amount = other_item.quantity * other_item.purchase_price
+                            # Recalculate actual weight based on whole quantity
+                            other_item.weight_percentage = (other_item.allocated_amount / basket.investment_amount) * 100
                             other_item.save()
             
             else:
@@ -293,6 +323,69 @@ def basket_item_edit(request, item_id):
             return JsonResponse({
                 'success': True,
                 'items': items_data,
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def basket_edit_investment(request, basket_id):
+    """Edit basket investment amount - recalculates all allocations"""
+    from django.http import JsonResponse
+    
+    if request.method == 'POST':
+        basket = get_object_or_404(Basket, id=basket_id)
+        
+        try:
+            new_investment = Decimal(request.POST.get('investment_amount'))
+            
+            if new_investment <= 0:
+                return JsonResponse({'success': False, 'error': 'Investment amount must be positive'})
+            
+            old_investment = basket.investment_amount
+            basket.investment_amount = new_investment
+            basket.save()
+            
+            # Recalculate all items based on new investment amount
+            items = basket.items.all()
+            items_data = []
+            
+            for item in items:
+                # Keep the same weight percentage, recalculate allocated amount
+                item.allocated_amount = (item.weight_percentage / 100) * new_investment
+                # Recalculate quantity based on new allocated amount (round to whole number)
+                item.quantity = int(item.allocated_amount / item.purchase_price)
+                
+                # Adjust allocated amount to reflect whole quantity
+                item.allocated_amount = item.quantity * item.purchase_price
+                
+                # Recalculate actual weight based on whole quantity
+                item.weight_percentage = (item.allocated_amount / new_investment) * 100
+                
+                item.save()
+                
+                items_data.append({
+                    'id': item.id,
+                    'weight_percentage': float(item.weight_percentage),
+                    'quantity': int(item.quantity),
+                    'allocated_amount': float(item.allocated_amount),
+                    'current_value': item.get_current_value(),
+                    'profit_loss': item.get_profit_loss(),
+                })
+            
+            # Calculate new totals
+            total_current_value = basket.get_total_value()
+            total_profit_loss = basket.get_profit_loss()
+            
+            return JsonResponse({
+                'success': True,
+                'investment_amount': float(new_investment),
+                'items': items_data,
+                'total_current_value': total_current_value,
+                'total_profit_loss': total_profit_loss,
+                'profit_loss_percentage': basket.get_profit_loss_percentage(),
             })
             
         except Exception as e:

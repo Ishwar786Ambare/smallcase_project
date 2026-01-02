@@ -119,12 +119,19 @@ def calculate_equal_weight_basket(stock_symbols, investment_amount):
                     stock.save()
 
             if stock.current_price and stock.current_price > 0:
-                quantity = amount_per_stock / stock.current_price
+                # Calculate quantity as whole number
+                quantity = int(amount_per_stock / stock.current_price)
+                
+                # Recalculate actual allocated amount based on whole quantity
+                actual_allocated_amount = quantity * stock.current_price
+                
+                # Recalculate actual weight based on actual allocated amount
+                actual_weight = (actual_allocated_amount / Decimal(str(investment_amount))) * 100
 
                 allocations.append({
                     'stock': stock,
-                    'weight_percentage': weight_per_stock,
-                    'allocated_amount': amount_per_stock,
+                    'weight_percentage': actual_weight,
+                    'allocated_amount': actual_allocated_amount,
                     'quantity': quantity,
                     'price': stock.current_price,
                 })
@@ -136,7 +143,7 @@ def calculate_equal_weight_basket(stock_symbols, investment_amount):
 
 def create_basket_with_stocks(name, description, investment_amount, stock_symbols):
     """
-    Create a basket with equal-weighted stocks
+    Create a basket with equal-weighted stocks (quantities as whole numbers)
 
     Args:
         name: Basket name
@@ -162,14 +169,14 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
         investment_amount=Decimal(str(investment_amount))
     )
 
-    # Create basket items
+    # Create basket items with whole number quantities
     for alloc in allocations:
         BasketItem.objects.create(
             basket=basket,
             stock=alloc['stock'],
             weight_percentage=alloc['weight_percentage'],
             allocated_amount=alloc['allocated_amount'],
-            quantity=alloc['quantity'],
+            quantity=alloc['quantity'],  # Already an integer
             purchase_price=alloc['price']
         )
 
