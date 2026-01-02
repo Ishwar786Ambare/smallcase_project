@@ -92,9 +92,19 @@ def basket_create(request):
             messages.error(request, 'Failed to create basket. Please try again.')
             return redirect('basket_create')
 
+    # Handle pre-filled values from duplication
+    prefill_name = request.GET.get('name', '')
+    prefill_description = request.GET.get('description', '')
+    prefill_investment = request.GET.get('investment_amount', '50000')
+    prefill_stocks = request.GET.get('stocks', '').split(',') if request.GET.get('stocks') else []
+    
     context = {
         'stocks': stocks,
         'csrf_token': get_token(request),
+        'prefill_name': prefill_name,
+        'prefill_description': prefill_description,
+        'prefill_investment': prefill_investment,
+        'prefill_stocks': prefill_stocks,
     }
     return render(request, 'stocks/basket_create.j2', context)
 
@@ -329,6 +339,29 @@ def basket_item_edit(request, item_id):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def basket_duplicate(request, basket_id):
+    """Duplicate a basket - redirect to create page with pre-filled values"""
+    basket = get_object_or_404(Basket, id=basket_id)
+    
+    # Get all stock symbols from the basket
+    stock_symbols = ','.join([item.stock.symbol for item in basket.items.all()])
+    
+    # Redirect to create page with query parameters
+    from django.http import HttpResponseRedirect
+    from urllib.parse import urlencode
+    
+    params = {
+        'duplicate': 'true',
+        'name': f"{basket.name} (Copy)",
+        'description': basket.description,
+        'investment_amount': str(basket.investment_amount),
+        'stocks': stock_symbols,
+    }
+    
+    url = f"{request.build_absolute_uri('/basket/create/')}?{urlencode(params)}"
+    return HttpResponseRedirect(url)
 
 
 def basket_edit_investment(request, basket_id):
