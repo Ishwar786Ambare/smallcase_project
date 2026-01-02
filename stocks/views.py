@@ -209,6 +209,15 @@ def basket_chart_data(request, basket_id):
     aligned_nifty = [nifty_dates[date] for date in common_dates]
     aligned_basket = [basket_dates[date] for date in common_dates]
     
+    # Ensure both start at exactly 100 (re-normalize to first common date)
+    if aligned_basket and aligned_nifty:
+        first_basket = aligned_basket[0]
+        first_nifty = aligned_nifty[0]
+        
+        # Re-index both to start at exactly 100
+        aligned_basket = [(val / first_basket) * 100 for val in aligned_basket]
+        aligned_nifty = [(val / first_nifty) * 100 for val in aligned_nifty]
+    
     # Calculate final values for summary
     final_basket_value = aligned_basket[-1] if aligned_basket else 100
     final_nifty_value = aligned_nifty[-1] if aligned_nifty else 100
@@ -266,34 +275,46 @@ def basket_performance(request, basket_id):
         nifty_hist = fetch_index_historical_data('^NSEI', period['code'])
         
         if basket_hist and nifty_hist:
-            # Get values: first (past) and last (today)
-            basket_start = basket_hist[0]['value']
-            basket_end = basket_hist[-1]['value']
+            # Create date dictionaries for alignment
+            basket_dates = {item['date']: item['value'] for item in basket_hist}
+            nifty_dates = {item['date']: item['value'] for item in nifty_hist}
             
-            nifty_start = nifty_hist[0]['value']
-            nifty_end = nifty_hist[-1]['value']
+            # Find common dates
+            common_dates = sorted(set(basket_dates.keys()) & set(nifty_dates.keys()))
             
-            # Calculate indexed values (₹100 invested then → ₹X today)
-            basket_value = (basket_end / basket_start) * 100
-            nifty_value = (nifty_end / nifty_start) * 100
-            
-            # Calculate returns
-            basket_return = basket_value - 100
-            nifty_return = nifty_value - 100
-            
-            # Determine who performed better
-            outperformance = basket_value - nifty_value
-            
-            performance_data.append({
-                'period': period['label'],
-                'code': period['code'],
-                'basket_value': round(basket_value, 2),
-                'nifty_value': round(nifty_value, 2),
-                'basket_return': round(basket_return, 2),
-                'nifty_return': round(nifty_return, 2),
-                'outperformance': round(outperformance, 2),
-                'basket_wins': basket_value > nifty_value
-            })
+            if common_dates:
+                # Get aligned values
+                basket_values = [basket_dates[date] for date in common_dates]
+                nifty_values = [nifty_dates[date] for date in common_dates]
+                
+                # Use first and last from common dates
+                basket_start = basket_values[0]
+                basket_end = basket_values[-1]
+                nifty_start = nifty_values[0]
+                nifty_end = nifty_values[-1]
+                
+                # Calculate indexed values (₹100 invested then → ₹X today)
+                # Both start from the same date, ensuring fair comparison
+                basket_value = (basket_end / basket_start) * 100
+                nifty_value = (nifty_end / nifty_start) * 100
+                
+                # Calculate returns
+                basket_return = basket_value - 100
+                nifty_return = nifty_value - 100
+                
+                # Determine who performed better
+                outperformance = basket_value - nifty_value
+                
+                performance_data.append({
+                    'period': period['label'],
+                    'code': period['code'],
+                    'basket_value': round(basket_value, 2),
+                    'nifty_value': round(nifty_value, 2),
+                    'basket_return': round(basket_return, 2),
+                    'nifty_return': round(nifty_return, 2),
+                    'outperformance': round(outperformance, 2),
+                    'basket_wins': basket_value > nifty_value
+                })
     
     context = {
         'basket': basket,
