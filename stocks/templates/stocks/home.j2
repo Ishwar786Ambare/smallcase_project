@@ -258,12 +258,12 @@
             </div>
             <div class="stat-card">
                 <div class="stat-label">Current Value</div>
-                <div class="stat-value">₹{{ total_current_value }}</div>
+                <div class="stat-value">₹{{ total_current_value|round(2) }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Profit/Loss</div>
                 <div class="stat-value {% if total_profit_loss %}positive{% else %}negative{% endif %}">
-                    ₹{{ total_profit_loss }}
+                    ₹{{ total_profit_loss|round(2) }}
                 </div>
             </div>
         </div>
@@ -287,16 +287,16 @@
                         <strong>Investment:</strong> ₹{{ basket.investment_amount}}
                     </div>
                     <div class="basket-info">
-                        <strong>Current Value:</strong> ₹{{ basket.get_total_value }}
+                        <strong>Current Value:</strong> ₹{{ basket.get_total_value()|round(2) }}
                     </div>
                     <div class="basket-info">
                         <strong>P/L:</strong>
-                        <span class="{% if basket.get_profit_loss %}positive{% else %}negative{% endif %}">
-                            ₹{{ basket.get_profit_loss }} ({{ basket.get_profit_loss_percentage }}%)
+                        <span class="{% if basket.get_profit_loss() >= 0 %}positive{% else %}negative{% endif %}">
+                            ₹{{ basket.get_profit_loss() }} ({{ basket.get_profit_loss_percentage() }}%)
                         </span>
                     </div>
                     <div class="basket-info">
-                        <strong>Stocks:</strong> {{ basket.items.count }}
+                        <strong>Stocks:</strong> {{basket.items | count}}
                     </div>
                     <div class="basket-actions">
                         <a href="{{ url('basket_detail', args=[basket.id]) }}" class="btn btn-primary">View Details</a>
@@ -348,4 +348,7 @@
         </div>
     </div>
 </body>
+<script>
+    $(document).ready(function() { $('#stocks-table').DataTable(); });
+</script>
 </html>

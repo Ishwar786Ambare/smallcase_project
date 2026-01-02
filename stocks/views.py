@@ -17,7 +17,7 @@ def home(request):
     """Home page showing all stocks and baskets"""
     stocks = Stock.objects.all()
     baskets = Basket.objects.all().order_by('-created_at')
-
+    print([basket.get_total_value() for basket in baskets])
     # Calculate total invested and current value
     total_invested = baskets.aggregate(Sum('investment_amount'))['investment_amount__sum'] or 0
     total_current_value = sum(basket.get_total_value() for basket in baskets)

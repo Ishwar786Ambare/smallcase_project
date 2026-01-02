@@ -223,11 +223,11 @@
             </div>
             <div class="stat-card">
                 <div class="stat-label">Current Value</div>
-                <div class="stat-value">₹{{ total_current_value }}</div>
+                <div class="stat-value">₹{{ total_current_value|round(2) }}</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Profit/Loss</div>
-                <div class="stat-value {% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
+                <div class="stat-value {% if total_profit_loss %}positive{% else %}negative{% endif %}">
                     ₹{{ total_profit_loss }}
                 </div>
             </div>
@@ -274,15 +274,9 @@
                         {% endif %}
                     </td>
                     <td>₹{{ item.allocated_amount }}</td>
-                    <td>₹{{ item.get_current_value }}</td>
-                    <td class="{% if item.get_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
-                        ₹{{ item.get_profit_loss }}
-                    </td>
-                </tr>
-
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 30px; color: #666;">
-                        No stocks in this basket
+                    <td>₹{{ item.get_current_value()|round(2) }}</td>
+                    <td class="{% if item.get_profit_loss %}positive{% else %}negative{% endif %}">
+                        ₹{{ item.get_profit_loss()|round(2) }}
                     </td>
                 </tr>
                 {% endfor %}
