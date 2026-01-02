@@ -2,6 +2,8 @@
 
 A web application for managing stock baskets with equal-weighted allocation.
 
+![Stock Basket Manager Preview](https://github.com/Ishwar786Ambare/smallcase_project/blob/main/image.jpeg)
+
 ## Features
 
 - Create and manage stock baskets
