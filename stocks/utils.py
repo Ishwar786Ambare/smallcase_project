@@ -40,6 +40,16 @@ INDIAN_STOCKS = {
     'UNITDSPR.NS': 'United Spirits',
     'TARIL.NS': 'Transformers & Rectifiers',
     'MAZDOCK.NS': 'Mazagon Dock Shipbuilding',
+    'GRSE.NS': 'Garden Reach Shipbuilders', 
+    'COFORGE.NS': 'Coforge', 
+    'INDHOTEL.NS': 'Indian Hotels Company', 
+    'HEROMOTOCO.NS': 'Hero Motocorp', 
+    'LT.NS': 'Larsen & Toubro', 
+    'RELIANCE.NS': 'Reliance Industries', 
+    'CHAMBLFERT.NS': 'Chambal Fertilisers & Chemicals', 
+    'BEL.NS': 'Bharat Electronics', 
+    'INDIGO.NS': 'Interglobe Aviation', 
+    'BHARTIARTL.NS': 'Bharti Airtel'
 }
 
 # Indian market indices

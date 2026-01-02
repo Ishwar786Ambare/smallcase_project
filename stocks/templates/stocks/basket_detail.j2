@@ -422,7 +422,7 @@
                 <td>₹{{ item.purchase_price }}</td>
                 <td>
                     {% if item.stock.current_price %}
-                        ₹{{ item.stock.current_price }}
+                        ₹{{ item.stock.current_price|round(2) }}
                     {% else %}
                         N/A
                     {% endif %}
