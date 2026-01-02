@@ -615,6 +615,15 @@ async function loadPerformanceChart(period = '1m') {
                 chartInstance.destroy();
             }
             
+            // Create gradients for better visual effect
+            const gradientBasket = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientBasket.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
+            gradientBasket.addColorStop(1, 'rgba(102, 126, 234, 0.01)');
+            
+            const gradientNifty = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientNifty.addColorStop(0, 'rgba(255, 99, 132, 0.4)');
+            gradientNifty.addColorStop(1, 'rgba(255, 99, 132, 0.01)');
+            
             chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -623,20 +632,30 @@ async function loadPerformanceChart(period = '1m') {
                         {
                             label: data.datasets.basket.label,
                             data: data.datasets.basket.data,
-                            borderColor: data.datasets.basket.color,
-                            backgroundColor: data.datasets.basket.color + '20',
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: gradientBasket,
                             borderWidth: 3,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: 'rgb(102, 126, 234)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2
                         },
                         {
                             label: data.datasets.nifty.label,
                             data: data.datasets.nifty.data,
-                            borderColor: data.datasets.nifty.color,
-                            backgroundColor: data.datasets.nifty.color + '20',
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: gradientNifty,
                             borderWidth: 3,
                             fill: true,
-                            tension: 0.4
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: 'rgb(255, 99, 132)',
+                            pointHoverBorderColor: '#fff',
+                            pointHoverBorderWidth: 2
                         }
                     ]
                 },
@@ -647,16 +666,48 @@ async function loadPerformanceChart(period = '1m') {
                         legend: {
                             display: true,
                             position: 'top',
-                        },
-                        title: {
-                            display: false
+                            align: 'end',
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 20,
+                                font: {
+                                    size: 13,
+                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                                }
+                            }
                         },
                         tooltip: {
+                            enabled: true,
                             mode: 'index',
                             intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyColor: '#fff',
+                            bodyFont: {
+                                size: 13
+                            },
+                            padding: 12,
+                            displayColors: true,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
                             callbacks: {
+                                title: function(tooltipItems) {
+                                    return 'Date: ' + tooltipItems[0].label;
+                                },
                                 label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + '%';
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    const value = context.parsed.y;
+                                    const sign = value >= 0 ? '+' : '';
+                                    label += sign + value.toFixed(2) + '%';
+                                    return label;
                                 }
                             }
                         }
@@ -664,26 +715,61 @@ async function loadPerformanceChart(period = '1m') {
                     scales: {
                         y: {
                             beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                            },
                             ticks: {
                                 callback: function(value) {
                                     return value.toFixed(1) + '%';
-                                }
+                                },
+                                font: {
+                                    size: 12
+                                },
+                                color: '#666'
                             },
                             title: {
                                 display: true,
-                                text: 'Returns (%)'
+                                text: 'Returns (%)',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
+                                color: '#333'
                             }
                         },
                         x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 10,
+                                font: {
+                                    size: 11
+                                },
+                                color: '#666'
+                            },
                             title: {
                                 display: true,
-                                text: 'Date'
+                                text: 'Date',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
+                                color: '#333'
                             }
                         }
                     },
                     interaction: {
-                        mode: 'nearest',
-                        axis: 'x',
+                        mode: 'index',
+                        intersect: false
+                    },
+                    hover: {
+                        mode: 'index',
                         intersect: false
                     }
                 }
