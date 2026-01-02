@@ -26,6 +26,19 @@ INDIAN_STOCKS = {
     'WIPRO.NS': 'Wipro',
     'HCLTECH.NS': 'HCL Technologies',
     'ULTRACEMCO.NS': 'UltraTech Cement',
+    'CGPOWER.NS': 'CG Power & Industrial Solutions',
+    'AUROPHARM.NS': 'Aurobindo Pharma',
+    'CAMS.NS': 'CAMS',
+    'CDSL.NS': 'CDSL',
+    'CHALET.NS': 'Chalet Hotels',
+    'KAYNES.NS': 'Kaynes Technology India',
+    'LUPIN.NS': 'Lupin',
+    'PERSISTENT.NS': 'Persistent Systems',
+    'POWERGRID.NS': 'Power Grid Corporation of India',
+    'PRICOLLTD.NS': 'Pricol',
+    'THYROCARE.NS': 'Thyrocare Technologies',
+    'UNITDSPR.NS': 'United Spirits',
+    'TARIL.NS': 'Transformers & Rectifiers'
 }
 
 
