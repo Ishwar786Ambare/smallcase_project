@@ -345,8 +345,22 @@
         <div style="position: relative; height: 400px;">
             <canvas id="performanceChart"></canvas>
         </div>
+        <div id="performance-summary" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">Your Basket: ₹100 invested →</div>
+                    <div style="font-size: 2em; font-weight: bold;" id="basket-final-value">₹100.00</div>
+                    <div style="font-size: 0.85em; margin-top: 5px;" id="basket-return">Return: +0.00%</div>
+                </div>
+                <div style="padding: 15px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 10px; color: white;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">Nifty 50: ₹100 invested →</div>
+                    <div style="font-size: 2em; font-weight: bold;" id="nifty-final-value">₹100.00</div>
+                    <div style="font-size: 0.85em; margin-top: 5px;" id="nifty-return">Return: +0.00%</div>
+                </div>
+            </div>
+        </div>
         <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9em;">
-            Comparing your basket's returns with Nifty 50 index
+            Performance comparison: Value of ₹100 invested over selected time period
         </div>
     </div>
 
@@ -705,9 +719,21 @@ async function loadPerformanceChart(period = '1m') {
                                         label += ': ';
                                     }
                                     const value = context.parsed.y;
-                                    const sign = value >= 0 ? '+' : '';
-                                    label += sign + value.toFixed(2) + '%';
+                                    label += '₹' + value.toFixed(2);
                                     return label;
+                                },
+                                footer: function(tooltipItems) {
+                                    // Show gain/loss from ₹100
+                                    const basketValue = tooltipItems[0].parsed.y;
+                                    const niftyValue = tooltipItems[1] ? tooltipItems[1].parsed.y : 100;
+                                    const basketChange = basketValue - 100;
+                                    const niftyChange = niftyValue - 100;
+                                    
+                                    return [
+                                        '',
+                                        tooltipItems[0].dataset.label + ' Return: ' + (basketChange >= 0 ? '+' : '') + basketChange.toFixed(2) + '%',
+                                        tooltipItems[1] ? (tooltipItems[1].dataset.label + ' Return: ' + (niftyChange >= 0 ? '+' : '') + niftyChange.toFixed(2) + '%') : ''
+                                    ];
                                 }
                             }
                         }
@@ -721,7 +747,7 @@ async function loadPerformanceChart(period = '1m') {
                             },
                             ticks: {
                                 callback: function(value) {
-                                    return value.toFixed(1) + '%';
+                                    return '₹' + value.toFixed(0);
                                 },
                                 font: {
                                     size: 12
@@ -730,7 +756,7 @@ async function loadPerformanceChart(period = '1m') {
                             },
                             title: {
                                 display: true,
-                                text: 'Returns (%)',
+                                text: 'Value of ₹100 Invested',
                                 font: {
                                     size: 13,
                                     weight: 'bold'
@@ -774,6 +800,20 @@ async function loadPerformanceChart(period = '1m') {
                     }
                 }
             });
+            
+            // Update performance summary cards
+            if (data.summary) {
+                const basketFinal = data.summary.basket_final;
+                const niftyFinal = data.summary.nifty_final;
+                const basketReturn = data.summary.basket_return_pct;
+                const niftyReturn = data.summary.nifty_return_pct;
+                
+                document.getElementById('basket-final-value').textContent = '₹' + basketFinal.toFixed(2);
+                document.getElementById('nifty-final-value').textContent = '₹' + niftyFinal.toFixed(2);
+                
+                document.getElementById('basket-return').textContent = 'Return: ' + (basketReturn >= 0 ? '+' : '') + basketReturn.toFixed(2) + '%';
+                document.getElementById('nifty-return').textContent = 'Return: ' + (niftyReturn >= 0 ? '+' : '') + niftyReturn.toFixed(2) + '%';
+            }
         } else {
             document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: #999;">Unable to load chart data: ' + (data.error || 'Unknown error') + '</p>';
         }

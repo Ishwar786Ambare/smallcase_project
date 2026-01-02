@@ -174,39 +174,44 @@ def basket_chart_data(request, basket_id):
             'error': 'Unable to fetch historical data'
         })
     
-    # Normalize both to percentage change from start
+    # Normalize both to indexed values starting at 100
+    # This shows: "If I invested ₹100, what would it be worth now?"
     if nifty_data:
         nifty_start_value = nifty_data[0]['value']
-        nifty_normalized = [
+        nifty_indexed = [
             {
                 'date': item['date'],
-                'value': ((item['value'] - nifty_start_value) / nifty_start_value) * 100
+                'value': (item['value'] / nifty_start_value) * 100  # Index to 100
             }
             for item in nifty_data
         ]
     else:
-        nifty_normalized = []
+        nifty_indexed = []
     
     if basket_data:
         basket_start_value = basket_data[0]['value']
-        basket_normalized = [
+        basket_indexed = [
             {
                 'date': item['date'],
-                'value': ((item['value'] - basket_start_value) / basket_start_value) * 100
+                'value': (item['value'] / basket_start_value) * 100  # Index to 100
             }
             for item in basket_data
         ]
     else:
-        basket_normalized = []
+        basket_indexed = []
     
     # Align dates (use dates where both have data)
-    nifty_dates = {item['date']: item['value'] for item in nifty_normalized}
-    basket_dates = {item['date']: item['value'] for item in basket_normalized}
+    nifty_dates = {item['date']: item['value'] for item in nifty_indexed}
+    basket_dates = {item['date']: item['value'] for item in basket_indexed}
     common_dates = sorted(set(nifty_dates.keys()) & set(basket_dates.keys()))
     
     # Build aligned datasets
     aligned_nifty = [nifty_dates[date] for date in common_dates]
     aligned_basket = [basket_dates[date] for date in common_dates]
+    
+    # Calculate final values for summary
+    final_basket_value = aligned_basket[-1] if aligned_basket else 100
+    final_nifty_value = aligned_nifty[-1] if aligned_nifty else 100
     
     return JsonResponse({
         'success': True,
@@ -216,13 +221,21 @@ def basket_chart_data(request, basket_id):
             'basket': {
                 'label': basket.name,
                 'data': aligned_basket,
-                'color': 'rgb(102, 126, 234)'
+                'color': 'rgb(102, 126, 234)',
+                'final_value': round(final_basket_value, 2)
             },
             'nifty': {
                 'label': 'Nifty 50',
                 'data': aligned_nifty,
-                'color': 'rgb(255, 99, 132)'
+                'color': 'rgb(255, 99, 132)',
+                'final_value': round(final_nifty_value, 2)
             }
+        },
+        'summary': {
+            'basket_final': round(final_basket_value, 2),
+            'nifty_final': round(final_nifty_value, 2),
+            'basket_return_pct': round(final_basket_value - 100, 2),
+            'nifty_return_pct': round(final_nifty_value - 100, 2)
         }
     })
 
