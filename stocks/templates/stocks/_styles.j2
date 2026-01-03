@@ -305,30 +305,169 @@ body {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .nav-menu {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-
-    .user-info {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-
+    /* Reduce body padding */
     body {
         padding: 10px;
     }
 
-    .main-header,
+    /* Compact header for mobile */
+    .main-header {
+        margin: -10px -10px 20px -10px;
+        position: relative;
+    }
+
+    .header-container {
+        padding: 10px 15px;
+        gap: 10px;
+    }
+
+    /* Logo smaller on mobile */
+    .logo {
+        font-size: 1.2em;
+    }
+
+    .logo-icon {
+        font-size: 1.5em;
+    }
+
+    /* Hide navigation menu on mobile (or make it horizontal scroll) */
+    nav {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .nav-menu {
+        gap: 10px;
+        padding: 5px 0;
+        flex-wrap: nowrap;
+        width: max-content;
+    }
+
+    .nav-menu a {
+        padding: 6px 12px;
+        font-size: 0.85em;
+        white-space: nowrap;
+    }
+
+    /* User info more compact */
+    .user-info {
+        padding: 6px 12px;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .user-name {
+        font-size: 0.9em;
+    }
+
+    .user-email {
+        display: none; /* Hide email on mobile to save space */
+    }
+
+    .btn-logout {
+        padding: 5px 12px;
+        font-size: 0.85em;
+    }
+
+    /* Theme toggle smaller */
+    .theme-toggle {
+        padding: 6px 12px;
+        font-size: 0.85em;
+    }
+
+    .theme-toggle .theme-icon {
+        font-size: 1.1em;
+    }
+
+    .theme-text {
+        display: none; /* Hide text, keep only icon on very small screens */
+    }
+
+    /* Auth buttons */
+    .btn-auth {
+        padding: 8px 16px;
+        font-size: 0.9em;
+    }
+
+    /* Footer */
     .main-footer {
-        margin-left: -10px;
+        margin: 30px -10px -10px -10px;
+        padding: 30px 20px 15px;
+    }
+
+    .footer-content {
+        grid-template-columns: 1fr;
+        gap: 25px;
+    }
+
+    /* Responsive tables - wrap in scrollable container */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Make table text smaller on mobile */
+    table th,
+    table td {
+        font-size: 0.85em;
+        padding: 8px;
+    }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+    /* Even more compact header */
+    .header-container {
+        padding: 8px 10px;
+    }
+
+    .logo {
+        font-size: 1.1em;
+    }
+
+    /* Stack header items vertically on very small screens */
+    .header-container {
+        align-items: stretch;
+    }
+
+    /* Navigation horizontal scroll */
+    .nav-menu {
+        font-size: 0.8em;
+    }
+
+    .nav-menu a {
+        padding: 5px 10px;
+        font-size: 0.8em;
+    }
+
+    /* Simplify user info */
+    .user-info {
+        font-size: 0.85em;
+        padding: 5px 10px;
+    }
+
+    .btn-logout {
+        font-size: 0.8em;
+        padding: 4px 10px;
+    }
+
+    /* Theme toggle icon only */
+    .theme-toggle {
+        padding: 5px 10px;
+    }
+
+    /* Auth buttons stack */
+    .btn-auth {
+        font-size: 0.85em;
+        padding: 6px 14px;
+    }
+
+    /* Smaller table font */
+    table th,
+    table td {
+        font-size: 0.75em;
+        padding: 6px 4px;
     }
 }
 

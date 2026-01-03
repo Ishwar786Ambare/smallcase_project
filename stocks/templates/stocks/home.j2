@@ -249,6 +249,75 @@
             color: var(--text-primary) !important;
             border: 1px solid var(--border-color);
         }
+
+        /* Mobile Responsive for Home Page */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .subtitle {
+                font-size: 1em;
+            }
+
+            .section-title {
+                font-size: 1.4em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .stat-card {
+                padding: 18px;
+            }
+
+            .baskets-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            /* Make DataTables wrapper scrollable */
+            .dataTables_wrapper {
+                overflow-x: auto;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .basket-card {
+                padding: 15px;
+            }
+
+            .basket-name {
+                font-size: 1.1em;
+            }
+
+            .basket-info {
+                font-size: 0.9em;
+            }
+        }
+
 </style>
 {% endblock %}
 {% block content %}
