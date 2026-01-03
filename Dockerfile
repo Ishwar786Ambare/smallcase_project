@@ -28,4 +28,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Run the application with Daphne (ASGI server for WebSocket support)
-CMD ["sh", "-c", "python manage.py migrate && python manage.py createsuperuser_env; daphne -b 0.0.0.0 -p $PORT smallcase_project.asgi:application"]
+CMD ["sh", "-c", "python manage.py migrate && (python manage.py createsuperuser_env || true) && daphne -b 0.0.0.0 -p ${PORT:-8000} smallcase_project.asgi:application"]
