@@ -171,6 +171,7 @@
                 placeholder="Choose a username" 
                 required
                 autocomplete="username"
+                value="{{ username|default('') }}"
             >
         </div>
 
@@ -183,6 +184,7 @@
                 placeholder="your.email@example.com" 
                 required
                 autocomplete="email"
+                value="{{ email|default('') }}"
             >
         </div>
 

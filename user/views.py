@@ -13,29 +13,35 @@ def signup(request):
     if request.user.is_authenticated:
         return redirect('home')
     
+    context = {'csrf_token': get_token(request)}
+    
     if request.method == 'POST':
         email = request.POST.get('email', '').strip().lower()
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '')
         password_confirm = request.POST.get('password_confirm', '')
         
+        # Preserve input values
+        context['email'] = email
+        context['username'] = username
+        
         # Validation
         if not email or not password or not username:
             messages.error(request, 'All fields are required')
-            return render(request, 'user/signup.j2')
+            return render(request, 'user/signup.j2', context)
         
         if password != password_confirm:
             messages.error(request, 'Passwords do not match')
-            return render(request, 'user/signup.j2')
+            return render(request, 'user/signup.j2', context)
         
         if len(password) < 6:
             messages.error(request, 'Password must be at least 6 characters')
-            return render(request, 'user/signup.j2')
+            return render(request, 'user/signup.j2', context)
         
         # Check if user already exists
         if User.objects.filter(email=email).exists():
             messages.error(request, 'Email already registered')
-            return render(request, 'user/signup.j2')
+            return render(request, 'user/signup.j2', context)
         
         # Create user
         try:
@@ -45,14 +51,15 @@ def signup(request):
                 password=make_password(password)
             )
             # Log in the user
+            # Specify backend to avoid "multiple authentication backends" error
+            user.backend = 'user.backends.EmailOrUsernameBackend'
             login(request, user)
             messages.success(request, f'Welcome {username}! Your account has been created.')
             return redirect('home')
         except Exception as e:
             messages.error(request, f'Error creating account: {str(e)}')
-            return render(request, 'user/signup.j2')
+            return render(request, 'user/signup.j2', context)
     
-    context = {'csrf_token': get_token(request)}
     return render(request, 'user/signup.j2', context)
 
 
