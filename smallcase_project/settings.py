@@ -167,5 +167,11 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
+# Custom authentication backend - allows login with email or username
+AUTHENTICATION_BACKENDS = [
+    'stocks.backends.EmailOrUsernameBackend',  # Custom backend
+    'django.contrib.auth.backends.ModelBackend',  # Default backend (fallback)
+]
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
