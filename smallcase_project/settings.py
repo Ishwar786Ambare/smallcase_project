@@ -27,10 +27,16 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-oy&7^1-p0nvhtnqug9&#k
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 # Allow Railway domain and localhost
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.railway.app').split(',')
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.railway.app,.up.railway.app').split(',') if h.strip()]
 
 # CSRF trusted origins for Railway
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000,http://127.0.0.1:8000').split(',')
+# Include both http (localhost) and https (Railway production)
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip() for origin in os.environ.get(
+        'CSRF_TRUSTED_ORIGINS', 
+        'http://localhost:8000,http://127.0.0.1:8000,https://*.railway.app,https://*.up.railway.app'
+    ).split(',') if origin.strip()
+]
 
 
 # Application definition
