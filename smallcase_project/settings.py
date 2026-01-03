@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -225,3 +229,18 @@ AUTHENTICATION_BACKENDS = [
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# ============ AI Chat Configuration ============
+# Choose AI provider: 'groq' (default) or 'gemini'
+AI_PROVIDER = os.environ.get('AI_PROVIDER', 'groq')
+
+# Groq API Configuration (Free tier: 30 requests/minute)
+# Get API key from: https://console.groq.com/keys
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+
+# Google Gemini API Configuration (Free tier: 15 requests/minute)
+# Get API key from: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')

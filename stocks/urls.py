@@ -32,6 +32,9 @@ urlpatterns = [
     path('api/chat/groups/add-member/', views.chat_add_member, name='chat_add_member'),
     path('api/chat/groups/leave/', views.chat_leave_group, name='chat_leave_group'),
     path('api/chat/users/search/', views.chat_search_users, name='chat_search_users'),
+    
+    # AI Chat API
+    path('api/ai/chat/', views.ai_chat, name='ai_chat'),
 ]
 
 
