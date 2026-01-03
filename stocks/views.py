@@ -2,10 +2,13 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.hashers import make_password
 from django.db.models import Sum, Prefetch
 from django.core.cache import cache
 from decimal import Decimal
-from .models import Stock, Basket, BasketItem
+from .models import Stock, Basket, BasketItem, User
 from .utils import (
     populate_indian_stocks,
     update_stock_prices,
@@ -14,6 +17,106 @@ from .utils import (
 )
 from django.middleware.csrf import get_token
 
+
+# ============ Authentication Views ============
+
+def signup(request):
+    """User registration view"""
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        password_confirm = request.POST.get('password_confirm', '')
+        
+        # Validation
+        if not email or not password or not username:
+            messages.error(request, 'All fields are required')
+            return render(request, 'stocks/signup.j2')
+        
+        if password != password_confirm:
+            messages.error(request, 'Passwords do not match')
+            return render(request, 'stocks/signup.j2')
+        
+        if len(password) < 6:
+            messages.error(request, 'Password must be at least 6 characters')
+            return render(request, 'stocks/signup.j2')
+        
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already registered')
+            return render(request, 'stocks/signup.j2')
+        
+        # Create user
+        try:
+            user = User.objects.create(
+                email=email,
+                username=username,
+                password=make_password(password)
+            )
+            # Log in the user
+            login(request, user)
+            messages.success(request, f'Welcome {username}! Your account has been created.')
+            return redirect('home')
+        except Exception as e:
+            messages.error(request, f'Error creating account: {str(e)}')
+            return render(request, 'stocks/signup.j2')
+    
+    context = {'csrf_token': get_token(request)}
+    return render(request, 'stocks/signup.j2', context)
+
+
+def login_view(request):
+    """User login view"""
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip().lower()
+        password = request.POST.get('password', '')
+        remember_me = request.POST.get('remember_me')
+        
+        if not email or not password:
+            messages.error(request, 'Email and password are required')
+            return render(request, 'stocks/login.j2')
+        
+        # Authenticate user
+        user = authenticate(request, username=email, password=password)
+        
+        if user is not None:
+            login(request, user)
+            
+            # Set session expiry based on remember me
+            if not remember_me:
+                request.session.set_expiry(0)  # Session expires when browser closes
+            else:
+                request.session.set_expiry(1209600)  # 2 weeks
+            
+            messages.success(request, f'Welcome back, {user.username}!')
+            
+            # Redirect to next parameter or home
+            next_url = request.GET.get('next', 'home')
+            return redirect(next_url)
+        else:
+            messages.error(request, 'Invalid email or password')
+            return render(request, 'stocks/login.j2')
+    
+    context = {'csrf_token': get_token(request)}
+    return render(request, 'stocks/login.j2', context)
+
+
+def logout_view(request):
+    """User logout view"""
+    logout(request)
+    messages.success(request, 'You have been logged out successfully')
+    return redirect('login')
+
+
+# ============ Stock and Basket Views ============
+
+@login_required
 def home(request):
     """Home page showing all stocks and baskets"""
     # OPTIMIZATION: Remove automatic price updates on page load
@@ -21,7 +124,8 @@ def home(request):
     
     # OPTIMIZATION: Use select_related and prefetch_related to reduce queries
     stocks = Stock.objects.all().order_by('symbol')
-    baskets = Basket.objects.prefetch_related(
+    # Filter baskets to show only user's baskets
+    baskets = Basket.objects.filter(user=request.user).prefetch_related(
         Prefetch('items', queryset=BasketItem.objects.select_related('stock'))
     ).order_by('-created_at')
     
@@ -50,6 +154,7 @@ def home(request):
     return render(request, 'stocks/home.j2', context)
 
 
+@login_required
 def populate_stocks(request):
     """Populate database with Indian stocks"""
     created_count = populate_indian_stocks()
@@ -57,6 +162,7 @@ def populate_stocks(request):
     return redirect('home')
 
 
+@login_required
 def update_prices(request):
     """Update all stock prices"""
     count = update_stock_prices()
@@ -68,6 +174,7 @@ def update_prices(request):
 
 
 
+@login_required
 def basket_create(request):
     """Create a new basket"""
     # OPTIMIZATION: Don't auto-update prices, let users trigger manually
@@ -105,7 +212,8 @@ def basket_create(request):
             name=name,
             description=description,
             investment_amount=investment_amount,
-            stock_symbols=selected_stocks
+            stock_symbols=selected_stocks,
+            user=request.user
         )
 
         if basket:
@@ -132,9 +240,10 @@ def basket_create(request):
     return render(request, 'stocks/basket_create.j2', context)
 
 
+@login_required
 def basket_detail(request, basket_id):
     """View basket details"""
-    basket = get_object_or_404(Basket, id=basket_id)
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     # OPTIMIZATION: Use select_related to avoid N+1 queries
     items = basket.items.select_related('stock').all()
 
@@ -178,12 +287,13 @@ def basket_detail(request, basket_id):
     return render(request, 'stocks/basket_detail.j2', context)
 
 
+@login_required
 def basket_chart_data(request, basket_id):
     """API endpoint to get basket performance vs indices data for chart"""
     from django.http import JsonResponse
     from .utils import fetch_index_historical_data, calculate_basket_historical_performance, INDIAN_INDICES
     
-    basket = get_object_or_404(Basket, id=basket_id)
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     
     # Get period from request, default to 1 month
     period = request.GET.get('period', '1m')
@@ -291,12 +401,13 @@ def basket_chart_data(request, basket_id):
     return JsonResponse(response_data)
 
 
+@login_required
 def basket_performance(request, basket_id):
     """Performance analysis page showing historical returns"""
     from datetime import datetime, timedelta
     from .utils import fetch_index_historical_data, calculate_basket_historical_performance
     
-    basket = get_object_or_404(Basket, id=basket_id)
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     
     # OPTIMIZATION: Cache performance data for 1 hour
     cache_key = f'performance_{basket.id}'
@@ -374,9 +485,10 @@ def basket_performance(request, basket_id):
     return render(request, 'stocks/basket_performance.j2', context)
 
 
+@login_required
 def basket_delete(request, basket_id):
     """Delete a basket"""
-    basket = get_object_or_404(Basket, id=basket_id)
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     basket_name = basket.name
     basket.delete()
     
@@ -392,6 +504,7 @@ def basket_delete(request, basket_id):
     return redirect('home')
 
 
+@login_required
 def preview_basket(request):
     """Preview basket allocation before creating"""
     if request.method == 'POST':
@@ -415,6 +528,7 @@ def preview_basket(request):
     return redirect('basket_create')
 
 
+@login_required
 def basket_item_edit(request, item_id):
     """Edit basket item - update weight or quantity, rebalancing other stocks to maintain 100% total"""
     from django.http import JsonResponse
@@ -422,6 +536,10 @@ def basket_item_edit(request, item_id):
     if request.method == 'POST':
         item = get_object_or_404(BasketItem, id=item_id)
         basket = item.basket
+        
+        # Verify basket belongs to user
+        if basket.user != request.user:
+            return JsonResponse({'success': False, 'error': 'Unauthorized'})
         
         try:
             update_type = request.POST.get('update_type')  # 'weight' or 'quantity'
@@ -570,9 +688,10 @@ def basket_item_edit(request, item_id):
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
 
+@login_required
 def basket_duplicate(request, basket_id):
     """Duplicate a basket - redirect to create page with pre-filled values"""
-    basket = get_object_or_404(Basket, id=basket_id)
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     
     # Get all stock symbols from the basket
     stock_symbols = ','.join([item.stock.symbol for item in basket.items.all()])
@@ -593,12 +712,13 @@ def basket_duplicate(request, basket_id):
     return HttpResponseRedirect(url)
 
 
+@login_required
 def basket_edit_investment(request, basket_id):
     """Edit basket investment amount - recalculates all allocations"""
     from django.http import JsonResponse
     
     if request.method == 'POST':
-        basket = get_object_or_404(Basket, id=basket_id)
+        basket = get_object_or_404(Basket, id=basket_id, user=request.user)
         
         try:
             new_investment = Decimal(request.POST.get('investment_amount'))

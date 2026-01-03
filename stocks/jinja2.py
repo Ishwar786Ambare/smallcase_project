@@ -9,10 +9,16 @@ def count_queryset(value):
 
 # date filter
 def date(value, format='%d %b %Y, %H:%M'):
-    print('-'*50)
-    print(value)
-    print('-'*50)
-    return value.strftime(format)
+    if value:
+        return value.strftime(format)
+    return ''
+
+# round filter
+def round_filter(value, precision=2):
+    try:
+        return round(float(value), precision)
+    except (ValueError, TypeError):
+        return value
 
 def environment(**options):
     env = Environment(**options)
@@ -22,4 +28,5 @@ def environment(**options):
     })
     env.filters['count'] = count_queryset
     env.filters['date'] = date
+    env.filters['round'] = round_filter
     return env

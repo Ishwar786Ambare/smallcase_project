@@ -2,6 +2,22 @@
 
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import AbstractUser
+
+
+class User(AbstractUser):
+    """Custom user model with email as username"""
+    email = models.EmailField(unique=True, db_index=True)
+    
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+    
+    def __str__(self):
+        return self.email
+    
+    class Meta:
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
 
 
 class Stock(models.Model):
@@ -24,6 +40,7 @@ class Stock(models.Model):
 
 class Basket(models.Model):
     """Model to store stock baskets"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='baskets', null=True, blank=True, db_index=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     investment_amount = models.DecimalField(max_digits=12, decimal_places=2)

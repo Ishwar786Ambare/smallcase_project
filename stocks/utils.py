@@ -386,7 +386,7 @@ def calculate_equal_weight_basket(stock_symbols, investment_amount):
     return allocations
 
 
-def create_basket_with_stocks(name, description, investment_amount, stock_symbols):
+def create_basket_with_stocks(name, description, investment_amount, stock_symbols, user=None):
     """
     Create a basket with equal-weighted stocks (quantities as whole numbers)
 
@@ -395,6 +395,7 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
         description: Basket description
         investment_amount: Total investment amount
         stock_symbols: List of stock symbols to include
+        user: User who owns the basket (optional for backward compatibility)
 
     Returns:
         Basket object
@@ -411,7 +412,8 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
     basket = Basket.objects.create(
         name=name,
         description=description,
-        investment_amount=Decimal(str(investment_amount))
+        investment_amount=Decimal(str(investment_amount)),
+        user=user
     )
 
     # Create basket items with whole number quantities

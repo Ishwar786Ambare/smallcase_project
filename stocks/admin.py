@@ -1,7 +1,16 @@
 # stocks/admin.py
 
 from django.contrib import admin
-from .models import Stock, Basket, BasketItem
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from .models import Stock, Basket, BasketItem, User
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    list_display = ['email', 'username', 'is_staff', 'is_active', 'date_joined']
+    search_fields = ['email', 'username']
+    ordering = ['email']
+    fieldsets = BaseUserAdmin.fieldsets
 
 
 @admin.register(Stock)
@@ -20,9 +29,9 @@ class BasketItemInline(admin.TabularInline):
 
 @admin.register(Basket)
 class BasketAdmin(admin.ModelAdmin):
-    list_display = ['name', 'investment_amount', 'created_at', 'get_current_value', 'get_profit_loss']
-    search_fields = ['name', 'description']
-    list_filter = ['created_at']
+    list_display = ['name', 'user', 'investment_amount', 'created_at', 'get_current_value', 'get_profit_loss']
+    search_fields = ['name', 'description', 'user__email']
+    list_filter = ['created_at', 'user']
     ordering = ['-created_at']
     inlines = [BasketItemInline]
 

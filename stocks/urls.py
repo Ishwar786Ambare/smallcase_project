@@ -4,6 +4,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Authentication
+    path('signup/', views.signup, name='signup'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    
+    # Home and stock management
     path('', views.home, name='home'),
     path('populate-stocks/', views.populate_stocks, name='populate_stocks'),
     path('update-prices/', views.update_prices, name='update_prices'),
