@@ -7,9 +7,14 @@ def count_queryset(value):
         return value.count()
     return len(value)
 
+from datetime import datetime
+
 # date filter
 def date(value, format='%d %b %Y, %H:%M'):
-    if value:
+    if value == 'now':
+        value = datetime.now()
+        
+    if hasattr(value, 'strftime'):
         return value.strftime(format)
     return ''
 
