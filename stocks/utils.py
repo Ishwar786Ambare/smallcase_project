@@ -417,6 +417,8 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
     )
 
     # Create basket items with whole number quantities
+    total_allocated = Decimal('0')
+    
     for alloc in allocations:
         BasketItem.objects.create(
             basket=basket,
@@ -426,5 +428,16 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
             quantity=alloc['quantity'],  # Already an integer
             purchase_price=alloc['price']
         )
+        total_allocated += alloc['allocated_amount']
+
+    # Update basket investment amount to actual total
+    if total_allocated > 0:
+        basket.investment_amount = total_allocated
+        basket.save()
+        
+        # Recalculate weights to ensure they sum to 100% relative to actual investment
+        for item in basket.items.all():
+            item.weight_percentage = (item.allocated_amount / total_allocated) * 100
+            item.save()
 
     return basket
