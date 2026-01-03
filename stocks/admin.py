@@ -1,16 +1,7 @@
 # stocks/admin.py
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Stock, Basket, BasketItem, User
-
-
-@admin.register(User)
-class UserAdmin(BaseUserAdmin):
-    list_display = ['email', 'username', 'is_staff', 'is_active', 'date_joined']
-    search_fields = ['email', 'username']
-    ordering = ['email']
-    fieldsets = BaseUserAdmin.fieldsets
+from .models import Stock, Basket, BasketItem
 
 
 @admin.register(Stock)

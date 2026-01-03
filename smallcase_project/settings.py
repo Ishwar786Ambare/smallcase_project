@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
-    'stocks',
+    'user',  # User authentication app
+    'stocks',  # Stock basket management app
 ]
 
 MIDDLEWARE = [
@@ -58,7 +59,10 @@ ROOT_URLCONF = 'smallcase_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.jinja2.Jinja2',
-        'DIRS': [BASE_DIR / 'stocks' / 'templates'],
+        'DIRS': [
+            BASE_DIR / 'stocks' / 'templates',
+            BASE_DIR / 'user' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'environment': 'stocks.jinja2.environment',
@@ -162,14 +166,14 @@ CACHES = {
 # }
 
 # Authentication settings
-AUTH_USER_MODEL = 'stocks.User'
-LOGIN_URL = '/login/'
+AUTH_USER_MODEL = 'user.User'  # Custom user model in user app
+LOGIN_URL = 'user:login'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGOUT_REDIRECT_URL = 'user:login'
 
 # Custom authentication backend - allows login with email or username
 AUTHENTICATION_BACKENDS = [
-    'stocks.backends.EmailOrUsernameBackend',  # Custom backend
+    'user.backends.EmailOrUsernameBackend',  # Custom backend in user app
     'django.contrib.auth.backends.ModelBackend',  # Default backend (fallback)
 ]
 

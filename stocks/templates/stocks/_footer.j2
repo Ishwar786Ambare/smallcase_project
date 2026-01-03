@@ -22,8 +22,8 @@
                     <li><a href="{{ url('populate_stocks') }}">📥 Load Stocks</a></li>
                     <li><a href="{{ url('update_prices') }}">🔄 Update Prices</a></li>
                     {% else %}
-                    <li><a href="{{ url('login') }}">🔐 Login</a></li>
-                    <li><a href="{{ url('signup') }}">✨ Sign Up</a></li>
+                    <li><a href="{{ url('user:login') }}">🔐 Login</a></li>
+                    <li><a href="{{ url('user:signup') }}">✨ Sign Up</a></li>
                     {% endif %}
                 </ul>
             </div>

@@ -1,7 +1,7 @@
 <!-- Main Header -->
 <header class="main-header">
     <div class="header-container">
-        <a href="{{ url('home') if request.user.is_authenticated else url('login') }}" class="logo">
+        <a href="{{ url('home') if request.user.is_authenticated else url('user:login') }}" class="logo">
             <span class="logo-icon">📊</span>
             <span>StockBasket</span>
         </a>
@@ -22,13 +22,13 @@
                 <div class="user-email">{{ request.user.email }}</div>
             </div>
             {% include 'stocks/_theme_toggle.j2' %}
-            <a href="{{ url('logout') }}" class="btn-logout">Logout</a>
+            <a href="{{ url('user:logout') }}" class="btn-logout">Logout</a>
         </div>
         {% else %}
         <div style="display: flex; gap: 15px; align-items: center;">
             {% include 'stocks/_theme_toggle.j2' %}
-            <a href="{{ url('login') }}" class="btn-auth">Login</a>
-            <a href="{{ url('signup') }}" class="btn-auth">Sign Up</a>
+            <a href="{{ url('user:login') }}" class="btn-auth">Login</a>
+            <a href="{{ url('user:signup') }}" class="btn-auth">Sign Up</a>
         </div>
         {% endif %}
     </div>
