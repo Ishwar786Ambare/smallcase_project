@@ -158,14 +158,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
     
     async def chat_message(self, event):
         """Handle chat message event from channel layer"""
-        message = event['message']
+        message = event['message'].copy()  # Copy to avoid mutating original
         
-        # Don't send the message back to the sender (they already got it)
-        if message.get('sender_id') != self.user.id:
-            await self.send(text_data=json.dumps({
-                'type': 'new_message',
-                'message': message
-            }))
+        # Set is_own based on whether this user is the sender
+        message['is_own'] = message.get('sender_id') == self.user.id
+        
+        # Send to client
+        await self.send(text_data=json.dumps({
+            'type': 'new_message',
+            'message': message
+        }))
     
     async def typing_indicator(self, event):
         """Handle typing indicator event"""

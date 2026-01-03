@@ -763,6 +763,7 @@
     let socket = null;
     let reconnectAttempts = 0;
     let typingTimeout = null;
+    let displayedMessageIds = new Set();  // Track displayed messages to prevent duplicates
     
     // DOM Elements
     const container = document.getElementById('chat-widget-container');
@@ -848,12 +849,27 @@
                 break;
                 
             case 'new_message':
-                addMessageToUI(data.message);
+                // Only add if it's not our own message (we already added it optimistically)
+                if (!data.message.is_own) {
+                    addMessageToUI(data.message);
+                } else {
+                    // It's our own message - just make sure we track the real ID
+                    if (data.message.id) {
+                        displayedMessageIds.add(data.message.id);
+                    }
+                }
                 break;
                 
             case 'message_sent':
-                // Message was successfully saved
-                console.log('Message sent successfully');
+                // Message was successfully saved - track the real ID
+                if (data.message && data.message.id) {
+                    displayedMessageIds.add(data.message.id);
+                    // Also track temp_id to real id mapping
+                    if (data.message.temp_id) {
+                        displayedMessageIds.add(data.message.temp_id);
+                    }
+                }
+                console.log('Message sent successfully:', data.message?.id);
                 break;
                 
             case 'group_joined':
@@ -953,10 +969,20 @@
     
     // Render Messages
     function renderMessages(messages) {
+        // Clear the displayed messages tracker for new conversation
+        displayedMessageIds.clear();
+        
         if (messages.length === 0) {
             messagesContainer.innerHTML = '<div class="message system-message"><p>No messages yet. Start the conversation!</p></div>';
             return;
         }
+        
+        // Track all message IDs that we're rendering
+        messages.forEach(msg => {
+            if (msg.id) {
+                displayedMessageIds.add(msg.id);
+            }
+        });
         
         messagesContainer.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -987,6 +1013,17 @@
     }
     
     function addMessageToUI(msg) {
+        // Prevent duplicate messages
+        const msgId = msg.id || msg.temp_id;
+        if (msgId && displayedMessageIds.has(msgId)) {
+            console.log('Skipping duplicate message:', msgId);
+            return;
+        }
+        
+        if (msgId) {
+            displayedMessageIds.add(msgId);
+        }
+        
         const msgDiv = document.createElement('div');
         msgDiv.innerHTML = createMessageHTML(msg);
         messagesContainer.appendChild(msgDiv.firstElementChild);
@@ -996,16 +1033,20 @@
     // Send Message via WebSocket
     function sendMessage(content) {
         if (socket && socket.readyState === WebSocket.OPEN) {
+            // Generate a temporary ID for optimistic UI update
+            const tempId = 'temp_' + Date.now();
+            
             socket.send(JSON.stringify({
                 type: 'message',
                 content: content,
-                group_id: currentGroupId
+                group_id: currentGroupId,
+                temp_id: tempId  // Send temp ID so server can include it in response
             }));
             
-            // Optimistically add message to UI
+            // Optimistically add message to UI with temp ID
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             addMessageToUI({
-                id: Date.now(),
+                id: tempId,  // Use temp ID so we can track it
                 content: content,
                 sender: 'You',
                 is_own: true,
