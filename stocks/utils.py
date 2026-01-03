@@ -217,35 +217,98 @@ def fetch_stock_price(symbol):
         return None
 
 
+def update_stock_prices_bulk(symbols):
+    """
+    OPTIMIZATION: Update prices for multiple stocks in bulk (much faster than one-by-one)
+    
+    Args:
+        symbols: List of stock symbols to update
+    
+    Returns:
+        Number of stocks updated
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    if not symbols:
+        return 0
+    
+    try:
+        # Fetch data for all symbols at once (much faster!)
+        symbols_str = ' '.join(symbols)
+        data = yf.download(symbols_str, period='1d', group_by='ticker', progress=False)
+        
+        updated_count = 0
+        for symbol in symbols:
+            try:
+                if len(symbols) == 1:
+                    # Single stock
+                    if not data.empty and 'Close' in data.columns:
+                        price = float(data['Close'].iloc[-1])
+                        stock = Stock.objects.get(symbol=symbol)
+                        stock.current_price = Decimal(str(price))
+                        stock.save()
+                        updated_count += 1
+                else:
+                    # Multiple stocks
+                    if symbol in data.columns.get_level_values(0):
+                        stock_data = data[symbol]
+                        if not stock_data.empty and 'Close' in stock_data.columns:
+                            price = float(stock_data['Close'].iloc[-1])
+                            stock = Stock.objects.get(symbol=symbol)
+                            stock.current_price = Decimal(str(price))
+                            stock.save()
+                            updated_count += 1
+            except Exception as e:
+                print(f"Error updating {symbol}: {e}")
+                continue
+        
+        print(f"Bulk updated {updated_count} stock prices")
+        return updated_count
+        
+    except Exception as e:
+        print(f"Error in bulk update: {e}")
+        # Fallback to individual updates
+        updated_count = 0
+        for symbol in symbols:
+            try:
+                price = fetch_stock_price(symbol)
+                if price:
+                    stock = Stock.objects.get(symbol=symbol)
+                    stock.current_price = Decimal(str(price))
+                    stock.save()
+                    updated_count += 1
+            except Exception as e:
+                print(f"Error updating {symbol}: {e}")
+                continue
+        return updated_count
+
+
 def update_stock_prices():
     """Update prices for all stocks in database (with 5-minute cache)"""
     from datetime import datetime, timedelta
     from django.utils import timezone
     
     stocks = Stock.objects.all()
-    updated_count = 0
     
+    # Filter stocks that need updating (no price or stale price)
+    stale_stocks = []
     for stock in stocks:
-        try:
-            # Only update if price is old (more than 5 minutes) or missing
-            should_update = False
-            if not stock.current_price:
-                should_update = True
-            elif stock.last_updated and stock.last_updated < timezone.now() - timedelta(minutes=5):
-                should_update = True
-            else:
-                # Price exists and is fresh (less than 5 minutes old)
-                should_update = False
-            
-            if should_update:
-                price = fetch_stock_price(stock.symbol)
-                if price:
-                    stock.current_price = Decimal(str(price))
-                    stock.save()  # This will auto-update last_updated due to auto_now=True
-                    updated_count += 1
-        except Exception as e:
-            print(f"Error updating {stock.symbol}: {e}")
-            continue
+        should_update = False
+        if not stock.current_price:
+            should_update = True
+        elif stock.last_updated and stock.last_updated < timezone.now() - timedelta(minutes=5):
+            should_update = True
+        
+        if should_update:
+            stale_stocks.append(stock.symbol)
+    
+    if not stale_stocks:
+        print("All stock prices are up to date")
+        return 0
+    
+    # OPTIMIZATION: Use bulk update instead of individual fetches
+    updated_count = update_stock_prices_bulk(stale_stocks)
     
     print(f"Updated {updated_count} stock prices")
     return updated_count

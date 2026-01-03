@@ -2,7 +2,8 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Prefetch
+from django.core.cache import cache
 from decimal import Decimal
 from .models import Stock, Basket, BasketItem
 from .utils import (
@@ -15,16 +16,28 @@ from django.middleware.csrf import get_token
 
 def home(request):
     """Home page showing all stocks and baskets"""
-    # Automatically update stock prices on home page load
-    from .utils import update_stock_prices
-    update_stock_prices()
+    # OPTIMIZATION: Remove automatic price updates on page load
+    # Users can manually trigger updates with the "Update Prices" button
     
-    stocks = Stock.objects.all()
-    baskets = Basket.objects.all().order_by('-created_at')
+    # OPTIMIZATION: Use select_related and prefetch_related to reduce queries
+    stocks = Stock.objects.all().order_by('symbol')
+    baskets = Basket.objects.prefetch_related(
+        Prefetch('items', queryset=BasketItem.objects.select_related('stock'))
+    ).order_by('-created_at')
     
-    # Calculate total invested and current value
+    # Calculate total invested using database aggregation
     total_invested = baskets.aggregate(Sum('investment_amount'))['investment_amount__sum'] or 0
-    total_current_value = sum(basket.get_total_value() for basket in baskets)
+    
+    # OPTIMIZATION: Cache basket calculations
+    total_current_value = 0
+    for basket in baskets:
+        cache_key = f'basket_value_{basket.id}_{basket.updated_at.timestamp()}'
+        basket_value = cache.get(cache_key)
+        if basket_value is None:
+            basket_value = basket.get_total_value()
+            cache.set(cache_key, basket_value, 300)  # Cache for 5 minutes
+        total_current_value += basket_value
+    
     total_profit_loss = total_current_value - float(total_invested)
 
     context = {
@@ -48,6 +61,8 @@ def update_prices(request):
     """Update all stock prices"""
     count = update_stock_prices()
     messages.success(request, f'Successfully updated prices for {count} stocks!')
+    # Clear basket value cache after price update
+    cache.clear()
     return redirect('home')
 
 
@@ -55,11 +70,9 @@ def update_prices(request):
 
 def basket_create(request):
     """Create a new basket"""
-    # Automatically update stock prices before creating basket
-    from .utils import update_stock_prices
-    update_stock_prices()
+    # OPTIMIZATION: Don't auto-update prices, let users trigger manually
     
-    stocks = Stock.objects.all()
+    stocks = Stock.objects.all().order_by('symbol')
 
     if request.method == 'POST':
         print('',request.POST)
@@ -122,27 +135,45 @@ def basket_create(request):
 def basket_detail(request, basket_id):
     """View basket details"""
     basket = get_object_or_404(Basket, id=basket_id)
+    # OPTIMIZATION: Use select_related to avoid N+1 queries
     items = basket.items.select_related('stock').all()
 
-    # Update stock prices
-    for item in items:
-        from .utils import fetch_stock_price
-        price = fetch_stock_price(item.stock.symbol)
-        if price:
-            item.stock.current_price = Decimal(str(price))
-            item.stock.save()
+    # OPTIMIZATION: Update prices in bulk only if they're stale (>5 mins old)
+    from datetime import timedelta
+    from django.utils import timezone
+    from .utils import update_stock_prices_bulk
+    
+    stale_stocks = [
+        item.stock for item in items
+        if not item.stock.current_price or 
+        item.stock.last_updated < timezone.now() - timedelta(minutes=5)
+    ]
+    
+    if stale_stocks:
+        symbols = [stock.symbol for stock in stale_stocks]
+        update_stock_prices_bulk(symbols)
+        # Refresh items from database to get updated prices
+        items = basket.items.select_related('stock').all()
 
-    # Calculate metrics
-    total_current_value = basket.get_total_value()
-    total_profit_loss = basket.get_profit_loss()
-    profit_loss_percentage = basket.get_profit_loss_percentage()
-
+    # Calculate metrics with caching
+    cache_key = f'basket_metrics_{basket.id}_{basket.updated_at.timestamp()}'
+    metrics = cache.get(cache_key)
+    
+    if metrics is None:
+        total_current_value = basket.get_total_value()
+        total_profit_loss = basket.get_profit_loss()
+        profit_loss_percentage = basket.get_profit_loss_percentage()
+        metrics = {
+            'total_current_value': total_current_value,
+            'total_profit_loss': total_profit_loss,
+            'profit_loss_percentage': profit_loss_percentage,
+        }
+        cache.set(cache_key, metrics, 300)  # Cache for 5 minutes
+    
     context = {
         'basket': basket,
         'items': items,
-        'total_current_value': total_current_value,
-        'total_profit_loss': total_profit_loss,
-        'profit_loss_percentage': profit_loss_percentage,
+        **metrics
     }
     return render(request, 'stocks/basket_detail.j2', context)
 
@@ -161,6 +192,12 @@ def basket_chart_data(request, basket_id):
     valid_periods = ['1d', '7d', '1m', '3m', '6m', '1y', '3y', '5y']
     if period not in valid_periods:
         period = '1m'
+    
+    # OPTIMIZATION: Cache chart data for 1 hour
+    cache_key = f'chart_data_{basket.id}_{period}'
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return JsonResponse(cached_data)
     
     # Fetch Nifty 50 historical data
     nifty_data = fetch_index_historical_data('^NSEI', period)
@@ -222,7 +259,7 @@ def basket_chart_data(request, basket_id):
     final_basket_value = aligned_basket[-1] if aligned_basket else 100
     final_nifty_value = aligned_nifty[-1] if aligned_nifty else 100
     
-    return JsonResponse({
+    response_data = {
         'success': True,
         'period': period,
         'labels': common_dates,
@@ -246,7 +283,12 @@ def basket_chart_data(request, basket_id):
             'basket_return_pct': round(final_basket_value - 100, 2),
             'nifty_return_pct': round(final_nifty_value - 100, 2)
         }
-    })
+    }
+    
+    # Cache for 1 hour
+    cache.set(cache_key, response_data, 3600)
+    
+    return JsonResponse(response_data)
 
 
 def basket_performance(request, basket_id):
@@ -256,65 +298,73 @@ def basket_performance(request, basket_id):
     
     basket = get_object_or_404(Basket, id=basket_id)
     
-    # Define time periods to analyze
-    periods = [
-        {'code': '1m', 'label': '1 Month', 'days': 30},
-        {'code': '3m', 'label': '3 Months', 'days': 90},
-        {'code': '6m', 'label': '6 Months', 'days': 180},
-        {'code': '1y', 'label': '1 Year', 'days': 365},
-        {'code': '2y', 'label': '2 Years', 'days': 730},
-        {'code': '3y', 'label': '3 Years', 'days': 1095},
-        {'code': '5y', 'label': '5 Years', 'days': 1825},
-    ]
+    # OPTIMIZATION: Cache performance data for 1 hour
+    cache_key = f'performance_{basket.id}'
+    performance_data = cache.get(cache_key)
     
-    performance_data = []
-    
-    for period in periods:
-        # Fetch historical data for this period
-        basket_hist = calculate_basket_historical_performance(basket, period['code'])
-        nifty_hist = fetch_index_historical_data('^NSEI', period['code'])
+    if performance_data is None:
+        # Define time periods to analyze
+        periods = [
+            {'code': '1m', 'label': '1 Month', 'days': 30},
+            {'code': '3m', 'label': '3 Months', 'days': 90},
+            {'code': '6m', 'label': '6 Months', 'days': 180},
+            {'code': '1y', 'label': '1 Year', 'days': 365},
+            {'code': '2y', 'label': '2 Years', 'days': 730},
+            {'code': '3y', 'label': '3 Years', 'days': 1095},
+            {'code': '5y', 'label': '5 Years', 'days': 1825},
+        ]
         
-        if basket_hist and nifty_hist:
-            # Create date dictionaries for alignment
-            basket_dates = {item['date']: item['value'] for item in basket_hist}
-            nifty_dates = {item['date']: item['value'] for item in nifty_hist}
+        performance_data = []
+        
+        for period in periods:
+            # Fetch historical data for this period
+            basket_hist = calculate_basket_historical_performance(basket, period['code'])
+            nifty_hist = fetch_index_historical_data('^NSEI', period['code'])
             
-            # Find common dates
-            common_dates = sorted(set(basket_dates.keys()) & set(nifty_dates.keys()))
-            
-            if common_dates:
-                # Get aligned values
-                basket_values = [basket_dates[date] for date in common_dates]
-                nifty_values = [nifty_dates[date] for date in common_dates]
+            if basket_hist and nifty_hist:
+                # Create date dictionaries for alignment
+                basket_dates = {item['date']: item['value'] for item in basket_hist}
+                nifty_dates = {item['date']: item['value'] for item in nifty_hist}
                 
-                # Use first and last from common dates
-                basket_start = basket_values[0]
-                basket_end = basket_values[-1]
-                nifty_start = nifty_values[0]
-                nifty_end = nifty_values[-1]
+                # Find common dates
+                common_dates = sorted(set(basket_dates.keys()) & set(nifty_dates.keys()))
                 
-                # Calculate indexed values (₹100 invested then → ₹X today)
-                # Both start from the same date, ensuring fair comparison
-                basket_value = (basket_end / basket_start) * 100
-                nifty_value = (nifty_end / nifty_start) * 100
-                
-                # Calculate returns
-                basket_return = basket_value - 100
-                nifty_return = nifty_value - 100
-                
-                # Determine who performed better
-                outperformance = basket_value - nifty_value
-                
-                performance_data.append({
-                    'period': period['label'],
-                    'code': period['code'],
-                    'basket_value': round(basket_value, 2),
-                    'nifty_value': round(nifty_value, 2),
-                    'basket_return': round(basket_return, 2),
-                    'nifty_return': round(nifty_return, 2),
-                    'outperformance': round(outperformance, 2),
-                    'basket_wins': basket_value > nifty_value
-                })
+                if common_dates:
+                    # Get aligned values
+                    basket_values = [basket_dates[date] for date in common_dates]
+                    nifty_values = [nifty_dates[date] for date in common_dates]
+                    
+                    # Use first and last from common dates
+                    basket_start = basket_values[0]
+                    basket_end = basket_values[-1]
+                    nifty_start = nifty_values[0]
+                    nifty_end = nifty_values[-1]
+                    
+                    # Calculate indexed values (₹100 invested then → ₹X today)
+                    # Both start from the same date, ensuring fair comparison
+                    basket_value = (basket_end / basket_start) * 100
+                    nifty_value = (nifty_end / nifty_start) * 100
+                    
+                    # Calculate returns
+                    basket_return = basket_value - 100
+                    nifty_return = nifty_value - 100
+                    
+                    # Determine who performed better
+                    outperformance = basket_value - nifty_value
+                    
+                    performance_data.append({
+                        'period': period['label'],
+                        'code': period['code'],
+                        'basket_value': round(basket_value, 2),
+                        'nifty_value': round(nifty_value, 2),
+                        'basket_return': round(basket_return, 2),
+                        'nifty_return': round(nifty_return, 2),
+                        'outperformance': round(outperformance, 2),
+                        'basket_wins': basket_value > nifty_value
+                    })
+        
+        # Cache for 1 hour
+        cache.set(cache_key, performance_data, 3600)
     
     context = {
         'basket': basket,
@@ -329,6 +379,15 @@ def basket_delete(request, basket_id):
     basket = get_object_or_404(Basket, id=basket_id)
     basket_name = basket.name
     basket.delete()
+    
+    # Clear caches related to this basket
+    cache.delete_many([
+        f'basket_value_{basket_id}*',
+        f'basket_metrics_{basket_id}*',
+        f'chart_data_{basket_id}*',
+        f'performance_{basket_id}'
+    ])
+    
     messages.success(request, f'Basket "{basket_name}" deleted successfully!')
     return redirect('home')
 
@@ -471,6 +530,12 @@ def basket_item_edit(request, item_id):
             else:
                 return JsonResponse({'success': False, 'error': 'Invalid update type'})
             
+            # Clear caches
+            cache.delete_many([
+                f'basket_value_{basket.id}*',
+                f'basket_metrics_{basket.id}*',
+            ])
+            
             # Get all items with updated values to return
             all_items = basket.items.all()
             items_data = []
@@ -571,6 +636,12 @@ def basket_edit_investment(request, basket_id):
                     'current_value': item.get_current_value(),
                     'profit_loss': item.get_profit_loss(),
                 })
+            
+            # Clear caches
+            cache.delete_many([
+                f'basket_value_{basket.id}*',
+                f'basket_metrics_{basket.id}*',
+            ])
             
             # Calculate new totals
             total_current_value = basket.get_total_value()

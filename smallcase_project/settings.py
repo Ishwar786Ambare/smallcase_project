@@ -137,5 +137,29 @@ CORS_ALLOW_ALL_ORIGINS = True  # For development only
 #     "https://example.com",
 # ]
 
+# Caching Configuration
+# Local memory cache for development (simple and requires no additional setup)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'smallcase-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000
+        },
+        'TIMEOUT': 300,  # 5 minutes default
+    }
+}
+
+# For production, consider using Redis for better performance and persistence:
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#         'LOCATION': 'redis://127.0.0.1:6379/1',
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
