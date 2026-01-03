@@ -21,10 +21,12 @@
                 <div class="user-name">👤 {{ request.user.username }}</div>
                 <div class="user-email">{{ request.user.email }}</div>
             </div>
+            {% include 'stocks/_theme_toggle.j2' %}
             <a href="{{ url('logout') }}" class="btn-logout">Logout</a>
         </div>
         {% else %}
-        <div style="display: flex; gap: 15px;">
+        <div style="display: flex; gap: 15px; align-items: center;">
+            {% include 'stocks/_theme_toggle.j2' %}
             <a href="{{ url('login') }}" class="btn-auth">Login</a>
             <a href="{{ url('signup') }}" class="btn-auth">Sign Up</a>
         </div>
