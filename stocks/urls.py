@@ -19,6 +19,9 @@ urlpatterns = [
     path('basket/<int:basket_id>/edit-investment/', views.basket_edit_investment, name='basket_edit_investment'),
     path('basket/preview/', views.preview_basket, name='preview_basket'),
     path('basket-item/<int:item_id>/edit/', views.basket_item_edit, name='basket_item_edit'),
+    
+    # Static pages
+    path('contact/', views.contact_us, name='contact_us'),
 ]
 
 

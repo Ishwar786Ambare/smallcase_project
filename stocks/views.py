@@ -691,3 +691,25 @@ def basket_edit_investment(request, basket_id):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def contact_us(request):
+    """Contact Us page"""
+    from django.shortcuts import render
+    from django.middleware.csrf import get_token
+    from django.contrib import messages
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        message = request.POST.get('message')
+        
+        if name and email and message:
+            # Here you would typically send an email
+            messages.success(request, 'Thank you for your message! We will get back to you soon.')
+            return redirect('contact_us')
+        else:
+            messages.error(request, 'Please fill in all fields.')
+    
+    context = {'csrf_token': get_token(request)}
+    return render(request, 'stocks/contact.j2', context)
