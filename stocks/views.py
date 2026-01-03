@@ -713,3 +713,492 @@ def contact_us(request):
     
     context = {'csrf_token': get_token(request)}
     return render(request, 'stocks/contact.j2', context)
+
+
+# ==========================================
+# Chat API Views
+# ==========================================
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import ChatGroup, ChatGroupMember, ChatMessage
+
+
+def get_or_create_support_chat(user):
+    """Get or create a support chat for the user"""
+    # Check if user already has a support chat
+    membership = ChatGroupMember.objects.filter(
+        user=user,
+        group__group_type='support',
+        is_active=True
+    ).select_related('group').first()
+    
+    if membership:
+        return membership.group
+    
+    # Create a new support chat for this user
+    group = ChatGroup.objects.create(
+        name=f"Support Chat - {user.email}",
+        group_type='support',
+        created_by=user,
+        avatar='👨‍💻'
+    )
+    
+    # Add user as member
+    ChatGroupMember.objects.create(
+        group=group,
+        user=user,
+        role='member'
+    )
+    
+    # Add initial system message
+    ChatMessage.objects.create(
+        group=group,
+        content="Hello! How can we help you today? 👋",
+        message_type='system'
+    )
+    
+    return group
+
+
+@login_required
+def chat_send_message(request):
+    """API to send a chat message"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    
+    try:
+        data = json.loads(request.body) if request.body else request.POST
+        content = data.get('content', '').strip()
+        group_id = data.get('group_id')
+        
+        if not content:
+            return JsonResponse({'success': False, 'error': 'Message cannot be empty'})
+        
+        # Get or create support chat if no group specified
+        if group_id:
+            group = get_object_or_404(ChatGroup, id=group_id, is_active=True)
+            # Verify user is member of this group
+            if not ChatGroupMember.objects.filter(group=group, user=request.user, is_active=True).exists():
+                return JsonResponse({'success': False, 'error': 'Not a member of this group'})
+        else:
+            group = get_or_create_support_chat(request.user)
+        
+        # Create message
+        message = ChatMessage.objects.create(
+            group=group,
+            sender=request.user,
+            content=content,
+            message_type='text'
+        )
+        
+        # Update group's updated_at timestamp
+        group.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': {
+                'id': message.id,
+                'content': message.content,
+                'sender': message.get_sender_name(),
+                'sender_id': request.user.id,
+                'message_type': message.message_type,
+                'created_at': message.created_at.strftime('%H:%M'),
+                'is_own': True
+            },
+            'group_id': group.id
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_get_messages(request):
+    """API to get chat messages for a group"""
+    group_id = request.GET.get('group_id')
+    last_message_id = request.GET.get('last_message_id')
+    
+    try:
+        # Get or create support chat if no group specified
+        if group_id:
+            group = get_object_or_404(ChatGroup, id=group_id, is_active=True)
+            
+            # Check if user is a member
+            is_member = ChatGroupMember.objects.filter(
+                group=group, user=request.user, is_active=True
+            ).exists()
+            
+            if not is_member:
+                # Allow admin/staff to join support chats automatically
+                if (request.user.is_staff or request.user.is_superuser) and group.group_type == 'support':
+                    # Auto-add admin as support member
+                    ChatGroupMember.objects.create(
+                        group=group,
+                        user=request.user,
+                        role='admin'
+                    )
+                    # Add system message about support joining
+                    ChatMessage.objects.create(
+                        group=group,
+                        content=f"Support team member joined the chat",
+                        message_type='system'
+                    )
+                else:
+                    return JsonResponse({'success': False, 'error': 'Not a member of this group'})
+        else:
+            group = get_or_create_support_chat(request.user)
+        
+        # Get messages
+        messages_qs = ChatMessage.objects.filter(
+            group=group,
+            is_deleted=False
+        ).select_related('sender').order_by('created_at')
+        
+        # If last_message_id provided, only get new messages
+        if last_message_id:
+            messages_qs = messages_qs.filter(id__gt=last_message_id)
+        else:
+            # Limit to last 50 messages for initial load
+            messages_qs = messages_qs[:50]
+        
+        # Mark messages as read
+        ChatMessage.objects.filter(
+            group=group,
+            is_read=False
+        ).exclude(sender=request.user).update(is_read=True)
+        
+        messages_data = []
+        for msg in messages_qs:
+            messages_data.append({
+                'id': msg.id,
+                'content': msg.content,
+                'sender': msg.get_sender_name(),
+                'sender_id': msg.sender.id if msg.sender else None,
+                'message_type': msg.message_type,
+                'created_at': msg.created_at.strftime('%H:%M'),
+                'is_own': msg.sender == request.user if msg.sender else False
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'messages': messages_data,
+            'group_id': group.id,
+            'group_name': group.name,
+            'group_avatar': group.avatar
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_get_groups(request):
+    """API to get user's chat groups"""
+    try:
+        groups_data = []
+        already_added_ids = set()
+        
+        # Get groups where user is a member
+        memberships = ChatGroupMember.objects.filter(
+            user=request.user,
+            is_active=True
+        ).select_related('group').order_by('-group__updated_at')
+        
+        for membership in memberships:
+            group = membership.group
+            already_added_ids.add(group.id)
+            last_message = group.get_last_message()
+            unread_count = group.get_unread_count(request.user)
+            
+            groups_data.append({
+                'id': group.id,
+                'name': group.name,
+                'avatar': group.avatar,
+                'group_type': group.group_type,
+                'members_count': group.get_members_count(),
+                'last_message': last_message.content[:50] if last_message else None,
+                'last_message_time': last_message.created_at.strftime('%H:%M') if last_message else None,
+                'unread_count': unread_count,
+                'role': membership.role,
+                'is_member': True
+            })
+        
+        # For admin/staff users: also show ALL support chats they can respond to
+        if request.user.is_staff or request.user.is_superuser:
+            support_chats = ChatGroup.objects.filter(
+                group_type='support',
+                is_active=True
+            ).exclude(id__in=already_added_ids).order_by('-updated_at')
+            
+            for group in support_chats:
+                last_message = group.get_last_message()
+                # Count messages not from staff as "unread" for support
+                unread_count = group.messages.filter(is_read=False).count()
+                
+                groups_data.append({
+                    'id': group.id,
+                    'name': group.name,
+                    'avatar': group.avatar,
+                    'group_type': group.group_type,
+                    'members_count': group.get_members_count(),
+                    'last_message': last_message.content[:50] if last_message else None,
+                    'last_message_time': last_message.created_at.strftime('%H:%M') if last_message else None,
+                    'unread_count': unread_count,
+                    'role': 'support',  # Special role for support staff
+                    'is_member': False  # Not yet a member, but can join
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'groups': groups_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_create_group(request):
+    """API to create a new chat group"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    
+    try:
+        data = json.loads(request.body) if request.body else request.POST
+        name = data.get('name', '').strip()
+        description = data.get('description', '')
+        member_ids = data.get('member_ids', [])
+        avatar = data.get('avatar', '👥')
+        
+        if not name:
+            return JsonResponse({'success': False, 'error': 'Group name is required'})
+        
+        # Create group
+        group = ChatGroup.objects.create(
+            name=name,
+            description=description,
+            group_type='group',
+            created_by=request.user,
+            avatar=avatar
+        )
+        
+        # Add creator as admin
+        ChatGroupMember.objects.create(
+            group=group,
+            user=request.user,
+            role='admin'
+        )
+        
+        # Add other members
+        if member_ids:
+            for member_id in member_ids:
+                try:
+                    user = User.objects.get(id=member_id)
+                    ChatGroupMember.objects.create(
+                        group=group,
+                        user=user,
+                        role='member'
+                    )
+                except User.DoesNotExist:
+                    pass
+        
+        # Add system message
+        ChatMessage.objects.create(
+            group=group,
+            content=f"Group '{name}' created by {request.user.username or request.user.email}",
+            message_type='system'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'group': {
+                'id': group.id,
+                'name': group.name,
+                'avatar': group.avatar,
+                'members_count': group.get_members_count()
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_add_member(request):
+    """API to add a member to a group"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    
+    try:
+        data = json.loads(request.body) if request.body else request.POST
+        group_id = data.get('group_id')
+        user_email = data.get('email', '').strip()
+        
+        if not group_id or not user_email:
+            return JsonResponse({'success': False, 'error': 'Group ID and email are required'})
+        
+        group = get_object_or_404(ChatGroup, id=group_id, is_active=True)
+        
+        # Verify requester is admin of the group
+        requester_membership = ChatGroupMember.objects.filter(
+            group=group,
+            user=request.user,
+            is_active=True
+        ).first()
+        
+        if not requester_membership or requester_membership.role not in ['admin', 'moderator']:
+            return JsonResponse({'success': False, 'error': 'Only admins can add members'})
+        
+        # Find user by email
+        try:
+            new_user = User.objects.get(email=user_email)
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'User not found'})
+        
+        # Check if already a member
+        if ChatGroupMember.objects.filter(group=group, user=new_user).exists():
+            return JsonResponse({'success': False, 'error': 'User is already a member'})
+        
+        # Add member
+        ChatGroupMember.objects.create(
+            group=group,
+            user=new_user,
+            role='member'
+        )
+        
+        # Add system message
+        ChatMessage.objects.create(
+            group=group,
+            content=f"{new_user.username or new_user.email} was added to the group",
+            message_type='system'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{new_user.email} added to the group'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_get_members(request):
+    """API to get members of a group"""
+    group_id = request.GET.get('group_id')
+    
+    if not group_id:
+        return JsonResponse({'success': False, 'error': 'Group ID is required'})
+    
+    try:
+        group = get_object_or_404(ChatGroup, id=group_id, is_active=True)
+        
+        # Verify user is member
+        if not ChatGroupMember.objects.filter(group=group, user=request.user, is_active=True).exists():
+            return JsonResponse({'success': False, 'error': 'Not a member of this group'})
+        
+        members = ChatGroupMember.objects.filter(
+            group=group,
+            is_active=True
+        ).select_related('user').order_by('role', 'joined_at')
+        
+        members_data = []
+        for member in members:
+            members_data.append({
+                'id': member.user.id,
+                'email': member.user.email,
+                'username': member.user.username or member.user.email.split('@')[0],
+                'role': member.role,
+                'joined_at': member.joined_at.strftime('%Y-%m-%d'),
+                'is_current_user': member.user == request.user
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'members': members_data,
+            'group_name': group.name
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required  
+def chat_leave_group(request):
+    """API to leave a chat group"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    
+    try:
+        data = json.loads(request.body) if request.body else request.POST
+        group_id = data.get('group_id')
+        
+        if not group_id:
+            return JsonResponse({'success': False, 'error': 'Group ID is required'})
+        
+        group = get_object_or_404(ChatGroup, id=group_id)
+        
+        membership = ChatGroupMember.objects.filter(
+            group=group,
+            user=request.user,
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return JsonResponse({'success': False, 'error': 'Not a member of this group'})
+        
+        # Don't allow leaving support chats
+        if group.group_type == 'support':
+            return JsonResponse({'success': False, 'error': 'Cannot leave support chat'})
+        
+        # Deactivate membership
+        membership.is_active = False
+        membership.save()
+        
+        # Add system message
+        ChatMessage.objects.create(
+            group=group,
+            content=f"{request.user.username or request.user.email} left the group",
+            message_type='system'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Left the group successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def chat_search_users(request):
+    """API to search users for adding to groups"""
+    query = request.GET.get('q', '').strip()
+    
+    if len(query) < 2:
+        return JsonResponse({'success': True, 'users': []})
+    
+    try:
+        users = User.objects.filter(
+            email__icontains=query
+        ).exclude(id=request.user.id)[:10]
+        
+        users_data = []
+        for user in users:
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'username': user.username or user.email.split('@')[0]
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'users': users_data
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

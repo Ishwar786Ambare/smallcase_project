@@ -22,6 +22,16 @@ urlpatterns = [
     
     # Static pages
     path('contact/', views.contact_us, name='contact_us'),
+    
+    # Chat API endpoints
+    path('api/chat/send/', views.chat_send_message, name='chat_send_message'),
+    path('api/chat/messages/', views.chat_get_messages, name='chat_get_messages'),
+    path('api/chat/groups/', views.chat_get_groups, name='chat_get_groups'),
+    path('api/chat/groups/create/', views.chat_create_group, name='chat_create_group'),
+    path('api/chat/groups/members/', views.chat_get_members, name='chat_get_members'),
+    path('api/chat/groups/add-member/', views.chat_add_member, name='chat_add_member'),
+    path('api/chat/groups/leave/', views.chat_leave_group, name='chat_leave_group'),
+    path('api/chat/users/search/', views.chat_search_users, name='chat_search_users'),
 ]
 
 

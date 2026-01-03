@@ -32,12 +32,14 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # ASGI server for WebSocket support (must be first)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',  # Django Channels for real-time WebSocket messaging
     'corsheaders',
     'user',  # User authentication app
     'stocks',  # Stock basket management app
@@ -83,6 +85,24 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'smallcase_project.wsgi.application'
+ASGI_APPLICATION = 'smallcase_project.asgi.application'
+
+# Channel Layers for real-time WebSocket messaging
+# Using in-memory channel layer for development
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
+# For production with Redis (higher performance, required for multi-server):
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("127.0.0.1", 6379)],
+#         },
+#     },
+# }
 
 
 # Database

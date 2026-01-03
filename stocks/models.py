@@ -96,3 +96,126 @@ class BasketItem(models.Model):
         indexes = [
             models.Index(fields=['basket', 'stock']),
         ]
+
+
+# ==========================================
+# Chat Models for Group Messaging
+# ==========================================
+
+class ChatGroup(models.Model):
+    """Model to store chat groups for group messaging"""
+    GROUP_TYPE_CHOICES = [
+        ('support', 'Support Chat'),
+        ('group', 'Group Chat'),
+        ('direct', 'Direct Message'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    group_type = models.CharField(max_length=20, choices=GROUP_TYPE_CHOICES, default='support')
+    created_by = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='created_chat_groups'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    avatar = models.CharField(max_length=10, default='👥')  # Emoji avatar
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_group_type_display()})"
+    
+    def get_members_count(self):
+        return self.members.filter(is_active=True).count()
+    
+    def get_last_message(self):
+        return self.messages.order_by('-created_at').first()
+    
+    def get_unread_count(self, user):
+        """Get count of unread messages for a specific user"""
+        return self.messages.exclude(sender=user).filter(is_read=False).count()
+    
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['group_type']),
+        ]
+
+
+class ChatGroupMember(models.Model):
+    """Model to store group membership"""
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('moderator', 'Moderator'),
+        ('member', 'Member'),
+    ]
+    
+    group = models.ForeignKey(ChatGroup, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_group_memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    notifications_enabled = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.user.email} in {self.group.name}"
+    
+    class Meta:
+        unique_together = ['group', 'user']
+        ordering = ['joined_at']
+        indexes = [
+            models.Index(fields=['group', 'user']),
+        ]
+
+
+class ChatMessage(models.Model):
+    """Model to store chat messages"""
+    MESSAGE_TYPE_CHOICES = [
+        ('text', 'Text Message'),
+        ('system', 'System Message'),
+        ('notification', 'Notification'),
+    ]
+    
+    group = models.ForeignKey(ChatGroup, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='sent_messages'
+    )
+    content = models.TextField()
+    message_type = models.CharField(max_length=20, choices=MESSAGE_TYPE_CHOICES, default='text')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_read = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
+    
+    # For replies
+    reply_to = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='replies'
+    )
+    
+    def __str__(self):
+        sender_name = self.sender.email if self.sender else 'System'
+        return f"{sender_name}: {self.content[:50]}..."
+    
+    def get_sender_name(self):
+        if self.sender:
+            return self.sender.username or self.sender.email.split('@')[0]
+        return 'Support Team'
+    
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['group', '-created_at']),
+            models.Index(fields=['sender']),
+        ]

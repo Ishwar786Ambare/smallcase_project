@@ -3,30 +3,95 @@
     <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Open Chat">
         <span class="chat-icon">💬</span>
         <span class="close-icon" style="display: none;">✕</span>
+        <span id="chat-unread-badge" class="unread-badge" style="display: none;">0</span>
     </button>
 
     <!-- Chat Window -->
     <div id="chat-window" class="chat-window" style="display: none;">
+        <!-- Chat Header -->
         <div class="chat-header">
             <div class="header-info">
-                <span class="avatar">👨‍💻</span>
+                <span id="chat-avatar" class="avatar">👨‍💻</span>
                 <div>
-                    <h3>Support Team</h3>
-                    <span class="status">Online</span>
+                    <h3 id="chat-group-name">Support Team</h3>
+                    <span id="chat-status" class="status">Connecting...</span>
                 </div>
             </div>
-            <button id="chat-minimize-btn" class="minimize-btn" aria-label="Minimize Chat">_</button>
-        </div>
-
-        <div id="chat-messages" class="chat-messages">
-            <div class="message system-message">
-                <p>Hello! How can we help you today? 👋</p>
-                <span class="time">{{ 'now'|date('H:i') }}</span>
+            <div class="header-actions">
+                <button id="chat-groups-btn" class="header-btn" title="View Groups">📋</button>
+                <button id="chat-new-group-btn" class="header-btn" title="Create Group">➕</button>
+                <button id="chat-minimize-btn" class="minimize-btn" aria-label="Minimize Chat">_</button>
             </div>
         </div>
 
+        <!-- Groups Panel (hidden by default) -->
+        <div id="groups-panel" class="groups-panel" style="display: none;">
+            <div class="panel-header">
+                <h4>Your Chats</h4>
+                <button id="close-groups-panel" class="close-panel-btn">✕</button>
+            </div>
+            <div id="groups-list" class="groups-list">
+                <!-- Groups will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Create Group Panel (hidden by default) -->
+        <div id="create-group-panel" class="create-group-panel" style="display: none;">
+            <div class="panel-header">
+                <h4>Create New Group</h4>
+                <button id="close-create-panel" class="close-panel-btn">✕</button>
+            </div>
+            <form id="create-group-form" class="create-group-form">
+                <input type="text" id="new-group-name" placeholder="Group Name" required>
+                <input type="text" id="new-group-description" placeholder="Description (optional)">
+                <select id="new-group-avatar">
+                    <option value="👥">👥 Team</option>
+                    <option value="💼">💼 Business</option>
+                    <option value="🎯">🎯 Project</option>
+                    <option value="💬">💬 Chat</option>
+                    <option value="🚀">🚀 Launch</option>
+                </select>
+                <div class="member-search-section">
+                    <input type="text" id="member-search" placeholder="Search users to add...">
+                    <div id="search-results" class="search-results"></div>
+                    <div id="selected-members" class="selected-members"></div>
+                </div>
+                <button type="submit" class="create-btn">Create Group</button>
+            </form>
+        </div>
+
+        <!-- Group Members Panel (hidden by default) -->
+        <div id="members-panel" class="members-panel" style="display: none;">
+            <div class="panel-header">
+                <h4 id="members-group-name">Group Members</h4>
+                <button id="close-members-panel" class="close-panel-btn">✕</button>
+            </div>
+            <div id="members-list" class="members-list">
+                <!-- Members will be loaded here -->
+            </div>
+            <div id="add-member-section" class="add-member-section" style="display: none;">
+                <input type="text" id="add-member-email" placeholder="Enter email to add">
+                <button id="add-member-btn" class="add-btn">Add</button>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-indicator" style="display: none;">
+            <span id="typing-user"></span> is typing...
+        </div>
+
+        <!-- Messages Area -->
+        <div id="chat-messages" class="chat-messages">
+            <div class="loading-messages">Loading messages...</div>
+        </div>
+
+        <!-- Input Area -->
         <div class="chat-input-area">
-            <form id="chat-form" onsubmit="handleChatSubmit(event)">
+            <div class="group-actions" id="group-actions" style="display: none;">
+                <button id="view-members-btn" class="action-btn" title="View Members">👥</button>
+                <button id="leave-group-btn" class="action-btn" title="Leave Group">🚪</button>
+            </div>
+            <form id="chat-form">
                 <input type="text" id="chat-input" placeholder="Type your message..." required autocomplete="off">
                 <button type="submit" class="send-btn">➤</button>
             </form>
@@ -59,6 +124,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
 
     .chat-toggle-btn:hover {
@@ -66,13 +132,29 @@
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
     }
 
+    .unread-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        min-width: 20px;
+        height: 20px;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
     /* Chat Window */
     .chat-window {
         position: absolute;
         bottom: 80px;
         right: 0;
-        width: 350px;
-        height: 450px;
+        width: 380px;
+        height: 520px;
         background: var(--container-bg, #ffffff);
         border-radius: 20px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -123,6 +205,10 @@
         margin: 0;
         font-size: 16px;
         font-weight: 600;
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .header-info .status {
@@ -138,8 +224,37 @@
         display: block;
         width: 8px;
         height: 8px;
-        background: #4ade80;
+        background: #fbbf24;
         border-radius: 50%;
+        transition: background 0.3s;
+    }
+
+    .header-info .status.online::before {
+        background: #4ade80;
+    }
+
+    .header-info .status.offline::before {
+        background: #ef4444;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .header-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+
+    .header-btn:hover {
+        background: rgba(255,255,255,0.3);
     }
 
     .minimize-btn {
@@ -156,6 +271,324 @@
         color: white;
     }
 
+    /* Typing Indicator */
+    .typing-indicator {
+        padding: 8px 20px;
+        font-size: 12px;
+        color: var(--text-secondary, #666);
+        background: var(--card-bg, #f9fafb);
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        font-style: italic;
+    }
+
+    /* Panels */
+    .groups-panel, .create-group-panel, .members-panel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--container-bg, #ffffff);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+    }
+
+    html[data-theme="dark"] .groups-panel,
+    html[data-theme="dark"] .create-group-panel,
+    html[data-theme="dark"] .members-panel {
+        background: #1e293b;
+    }
+
+    .panel-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+    }
+
+    .panel-header h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .close-panel-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    /* Groups List */
+    .groups-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    .group-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+        gap: 12px;
+        margin-bottom: 8px;
+        background: var(--card-bg, #f9fafb);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    html[data-theme="dark"] .group-item {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .group-item:hover {
+        background: var(--border-color, #e5e7eb);
+    }
+
+    html[data-theme="dark"] .group-item:hover {
+        background: #1e293b;
+    }
+
+    .group-item .group-avatar {
+        font-size: 24px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 50%;
+    }
+
+    .group-item .group-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .group-item .group-name {
+        font-weight: 600;
+        color: var(--text-primary, #333);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .group-item .group-preview {
+        font-size: 12px;
+        color: var(--text-secondary, #666);
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .group-item .group-meta {
+        text-align: right;
+    }
+
+    .group-item .group-time {
+        font-size: 11px;
+        color: var(--text-secondary, #666);
+    }
+
+    .group-item .group-unread {
+        background: #667eea;
+        color: white;
+        border-radius: 50%;
+        min-width: 20px;
+        height: 20px;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 4px;
+    }
+
+    /* Create Group Form */
+    .create-group-form {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .create-group-form input, .create-group-form select {
+        padding: 12px 15px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color, #ddd);
+        background: var(--card-bg, #f9fafb);
+        color: var(--text-primary, #333);
+        font-size: 14px;
+    }
+
+    .create-group-form input:focus, .create-group-form select:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+
+    .member-search-section {
+        margin-top: 10px;
+    }
+
+    .search-results {
+        max-height: 120px;
+        overflow-y: auto;
+        margin-top: 8px;
+    }
+
+    .search-result-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        background: var(--card-bg, #f9fafb);
+        border: 1px solid var(--border-color, #e5e7eb);
+        margin-bottom: 4px;
+    }
+
+    html[data-theme="dark"] .search-result-item {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .search-result-item:hover {
+        background: var(--border-color, #e5e7eb);
+    }
+
+    .selected-members {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .selected-member {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        background: #667eea;
+        color: white;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+
+    .selected-member .remove-member {
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .create-btn {
+        padding: 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .create-btn:hover {
+        transform: scale(1.02);
+    }
+
+    /* Members List */
+    .members-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+    }
+
+    .member-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        background: var(--card-bg, #f9fafb);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    html[data-theme="dark"] .member-item {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .member-item .member-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        margin-right: 12px;
+    }
+
+    .member-item .member-info {
+        flex: 1;
+    }
+
+    .member-item .member-name {
+        font-weight: 600;
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+
+    .member-item .member-email {
+        font-size: 12px;
+        color: var(--text-secondary, #666);
+        margin: 0;
+    }
+
+    .member-item .member-role {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+    }
+
+    .add-member-section {
+        padding: 15px;
+        border-top: 1px solid var(--border-color, #e5e7eb);
+        display: flex;
+        gap: 10px;
+    }
+
+    .add-member-section input {
+        flex: 1;
+        padding: 10px 15px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color, #ddd);
+        background: var(--card-bg, #f9fafb);
+        color: var(--text-primary, #333);
+    }
+
+    .add-btn {
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
     /* Messages Area */
     .chat-messages {
         flex: 1;
@@ -167,6 +600,12 @@
         gap: 15px;
     }
 
+    .loading-messages {
+        text-align: center;
+        color: var(--text-secondary, #666);
+        padding: 20px;
+    }
+
     .message {
         max-width: 80%;
         padding: 12px 16px;
@@ -175,6 +614,12 @@
         line-height: 1.4;
         position: relative;
         word-wrap: break-word;
+        animation: messageIn 0.3s ease-out;
+    }
+
+    @keyframes messageIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .message.system-message {
@@ -200,6 +645,29 @@
         box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
     }
 
+    .message.other-message {
+        align-self: flex-start;
+        background: var(--container-bg, #ffffff);
+        color: var(--text-primary, #333);
+        border-bottom-left-radius: 2px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    html[data-theme="dark"] .message.other-message {
+        background: #1e293b;
+        color: #e2e8f0;
+        border-color: #334155;
+    }
+
+    .message .sender-name {
+        font-size: 11px;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 4px;
+        display: block;
+    }
+
     .message .time {
         display: block;
         font-size: 10px;
@@ -213,6 +681,26 @@
         padding: 15px;
         background: var(--container-bg, #ffffff);
         border-top: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .group-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+
+    .action-btn {
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color, #ddd);
+        background: var(--card-bg, #f9fafb);
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+        background: var(--border-color, #e5e7eb);
     }
 
     #chat-form {
@@ -258,7 +746,7 @@
     @media (max-width: 480px) {
         .chat-window {
             width: calc(100vw - 40px);
-            right: -10px; /* Adjust for container padding */
+            right: -10px;
             bottom: 70px;
             height: 60vh;
         }
@@ -266,91 +754,633 @@
 </style>
 
 <script>
-    (function() {
-        const container = document.getElementById('chat-widget-container');
-        const toggleBtn = document.getElementById('chat-toggle-btn');
-        const chatWindow = document.getElementById('chat-window');
-        const minimizeBtn = document.getElementById('chat-minimize-btn');
-        const chatIcon = toggleBtn.querySelector('.chat-icon');
-        const closeIcon = toggleBtn.querySelector('.close-icon');
-        const messagesContainer = document.getElementById('chat-messages');
-
-        let isOpen = false;
-
-        function toggleChat() {
-            isOpen = !isOpen;
-            if (isOpen) {
-                chatWindow.style.display = 'flex';
-                chatIcon.style.display = 'none';
-                closeIcon.style.display = 'block';
-                // Scroll to bottom
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                // Focus input
-                setTimeout(() => document.getElementById('chat-input').focus(), 100);
-            } else {
-                chatWindow.style.display = 'none';
-                chatIcon.style.display = 'block';
-                closeIcon.style.display = 'none';
-            }
-        }
-
-        toggleBtn.addEventListener('click', toggleChat);
-        minimizeBtn.addEventListener('click', toggleChat);
-
-        // Form submission
-        window.handleChatSubmit = function(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            
-            if (!text) return;
-
-            // Add user message
-            addMessage(text, 'user');
-            input.value = '';
-
-            // Simulate typing delay and backend response
-            setTimeout(() => {
-                showTypingIndicator();
-                
-                // Simulate backend call (replace with actual fetch if backend implemented)
-                setTimeout(() => {
-                    removeTypingIndicator();
-                    addMessage("Thanks for your message! Our team will get back to you shortly.", 'system');
-                }, 1500);
-            }, 500);
+(function() {
+    // State
+    let isOpen = false;
+    let currentGroupId = null;
+    let currentGroupType = 'support';
+    let selectedMembers = [];
+    let socket = null;
+    let reconnectAttempts = 0;
+    let typingTimeout = null;
+    
+    // DOM Elements
+    const container = document.getElementById('chat-widget-container');
+    const toggleBtn = document.getElementById('chat-toggle-btn');
+    const chatWindow = document.getElementById('chat-window');
+    const minimizeBtn = document.getElementById('chat-minimize-btn');
+    const chatIcon = toggleBtn.querySelector('.chat-icon');
+    const closeIcon = toggleBtn.querySelector('.close-icon');
+    const messagesContainer = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const unreadBadge = document.getElementById('chat-unread-badge');
+    const statusIndicator = document.getElementById('chat-status');
+    const typingIndicator = document.getElementById('typing-indicator');
+    
+    // Panels
+    const groupsPanel = document.getElementById('groups-panel');
+    const createGroupPanel = document.getElementById('create-group-panel');
+    const membersPanel = document.getElementById('members-panel');
+    
+    // Buttons
+    const groupsBtn = document.getElementById('chat-groups-btn');
+    const newGroupBtn = document.getElementById('chat-new-group-btn');
+    const closeGroupsPanel = document.getElementById('close-groups-panel');
+    const closeCreatePanel = document.getElementById('close-create-panel');
+    const closeMembersPanel = document.getElementById('close-members-panel');
+    const viewMembersBtn = document.getElementById('view-members-btn');
+    const leaveGroupBtn = document.getElementById('leave-group-btn');
+    const groupActions = document.getElementById('group-actions');
+    
+    // CSRF Token
+    function getCsrfToken() {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        return cookieValue || '';
+    }
+    
+    // WebSocket Connection
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = currentGroupId 
+            ? `${protocol}//${window.location.host}/ws/chat/${currentGroupId}/`
+            : `${protocol}//${window.location.host}/ws/chat/`;
+        
+        socket = new WebSocket(wsUrl);
+        
+        socket.onopen = function(e) {
+            console.log('WebSocket connected');
+            updateStatus('Online', 'online');
+            reconnectAttempts = 0;
         };
-
-        function addMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = `message ${type}-message`;
+        
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            handleSocketMessage(data);
+        };
+        
+        socket.onclose = function(e) {
+            console.log('WebSocket disconnected');
+            updateStatus('Offline', 'offline');
             
+            // Attempt to reconnect with exponential backoff
+            if (isOpen && reconnectAttempts < 5) {
+                reconnectAttempts++;
+                const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                console.log(`Reconnecting in ${delay}ms...`);
+                setTimeout(connectWebSocket, delay);
+            }
+        };
+        
+        socket.onerror = function(e) {
+            console.error('WebSocket error:', e);
+            updateStatus('Error', 'offline');
+        };
+    }
+    
+    function handleSocketMessage(data) {
+        switch(data.type) {
+            case 'connection_established':
+                console.log('Connection established:', data.room);
+                break;
+                
+            case 'new_message':
+                addMessageToUI(data.message);
+                break;
+                
+            case 'message_sent':
+                // Message was successfully saved
+                console.log('Message sent successfully');
+                break;
+                
+            case 'group_joined':
+                console.log('Joined group:', data.group_id);
+                loadMessages();
+                break;
+                
+            case 'typing':
+                showTypingIndicator(data.username, data.is_typing);
+                break;
+                
+            case 'error':
+                console.error('Socket error:', data.message);
+                break;
+        }
+    }
+    
+    function updateStatus(text, state) {
+        statusIndicator.textContent = text;
+        statusIndicator.className = 'status ' + state;
+    }
+    
+    function showTypingIndicator(username, isTyping) {
+        if (isTyping) {
+            document.getElementById('typing-user').textContent = username;
+            typingIndicator.style.display = 'block';
+        } else {
+            typingIndicator.style.display = 'none';
+        }
+    }
+    
+    // Send typing indicator
+    function sendTypingIndicator(isTyping) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'typing',
+                group_id: currentGroupId,
+                is_typing: isTyping
+            }));
+        }
+    }
+    
+    // Toggle Chat
+    function toggleChat() {
+        isOpen = !isOpen;
+        if (isOpen) {
+            chatWindow.style.display = 'flex';
+            chatIcon.style.display = 'none';
+            closeIcon.style.display = 'block';
+            loadMessages();
+            setTimeout(() => chatInput.focus(), 100);
+        } else {
+            chatWindow.style.display = 'none';
+            chatIcon.style.display = 'block';
+            closeIcon.style.display = 'none';
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+            closeAllPanels();
+        }
+    }
+    
+    // Load Messages via API (initial load)
+    async function loadMessages() {
+        try {
+            const url = currentGroupId 
+                ? `/api/chat/messages/?group_id=${currentGroupId}`
+                : '/api/chat/messages/';
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                currentGroupId = data.group_id;
+                updateHeader(data.group_name, data.group_avatar);
+                renderMessages(data.messages);
+                
+                // Connect WebSocket after we know the group
+                if (socket) {
+                    socket.close();
+                }
+                connectWebSocket();
+                
+                // Show group actions for group chats
+                if (currentGroupType === 'group') {
+                    groupActions.style.display = 'flex';
+                } else {
+                    groupActions.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading messages:', error);
+            messagesContainer.innerHTML = '<div class="loading-messages">Failed to load messages</div>';
+        }
+    }
+    
+    // Render Messages
+    function renderMessages(messages) {
+        if (messages.length === 0) {
+            messagesContainer.innerHTML = '<div class="message system-message"><p>No messages yet. Start the conversation!</p></div>';
+            return;
+        }
+        
+        messagesContainer.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    function createMessageHTML(msg) {
+        let className = 'message ';
+        if (msg.message_type === 'system') {
+            className += 'system-message';
+        } else if (msg.is_own) {
+            className += 'user-message';
+        } else {
+            className += 'other-message';
+        }
+        
+        let senderHtml = '';
+        if (msg.message_type !== 'system' && !msg.is_own && currentGroupType === 'group') {
+            senderHtml = `<span class="sender-name">${escapeHtml(msg.sender)}</span>`;
+        }
+        
+        return `
+            <div class="${className}" data-id="${msg.id}">
+                ${senderHtml}
+                <p>${escapeHtml(msg.content)}</p>
+                <span class="time">${msg.created_at}</span>
+            </div>
+        `;
+    }
+    
+    function addMessageToUI(msg) {
+        const msgDiv = document.createElement('div');
+        msgDiv.innerHTML = createMessageHTML(msg);
+        messagesContainer.appendChild(msgDiv.firstElementChild);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Send Message via WebSocket
+    function sendMessage(content) {
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({
+                type: 'message',
+                content: content,
+                group_id: currentGroupId
+            }));
+            
+            // Optimistically add message to UI
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            addMessageToUI({
+                id: Date.now(),
+                content: content,
+                sender: 'You',
+                is_own: true,
+                message_type: 'text',
+                created_at: time
+            });
+        } else {
+            // Fallback to HTTP API if WebSocket not available
+            sendMessageHTTP(content);
+        }
+    }
+    
+    // Fallback: Send Message via HTTP API
+    async function sendMessageHTTP(content) {
+        try {
+            const response = await fetch('/api/chat/send/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    content: content,
+                    group_id: currentGroupId
+                })
+            });
             
-            div.innerHTML = `
-                <p></p>
-                <span class="time">${time}</span>
-            `;
-            div.querySelector('p').textContent = text;
+            const data = await response.json();
             
-            messagesContainer.appendChild(div);
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            if (data.success) {
+                currentGroupId = data.group_id;
+                addMessageToUI(data.message);
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
         }
-
-        function showTypingIndicator() {
-            const div = document.createElement('div');
-            div.id = 'typing-indicator';
-            div.className = 'message system-message';
-            div.style.padding = '8px 12px';
-            div.innerHTML = '<span style="animation: pulse 1s infinite">...</span>';
-            messagesContainer.appendChild(div);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    
+    // Update Header
+    function updateHeader(name, avatar) {
+        document.getElementById('chat-group-name').textContent = name || 'Support Team';
+        document.getElementById('chat-avatar').textContent = avatar || '👨‍💻';
+    }
+    
+    // Load Groups
+    async function loadGroups() {
+        try {
+            const response = await fetch('/api/chat/groups/');
+            const data = await response.json();
+            
+            if (data.success) {
+                const groupsList = document.getElementById('groups-list');
+                
+                if (data.groups.length === 0) {
+                    groupsList.innerHTML = '<div class="loading-messages">No groups yet. Create one!</div>';
+                    return;
+                }
+                
+                groupsList.innerHTML = data.groups.map(group => `
+                    <div class="group-item" data-id="${group.id}" data-type="${group.group_type}">
+                        <div class="group-avatar">${group.avatar}</div>
+                        <div class="group-info">
+                            <p class="group-name">${escapeHtml(group.name)}</p>
+                            <p class="group-preview">${group.last_message ? escapeHtml(group.last_message) : 'No messages yet'}</p>
+                        </div>
+                        <div class="group-meta">
+                            ${group.last_message_time ? `<span class="group-time">${group.last_message_time}</span>` : ''}
+                            ${group.unread_count > 0 ? `<span class="group-unread">${group.unread_count}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Add click handlers
+                groupsList.querySelectorAll('.group-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        currentGroupId = parseInt(item.dataset.id);
+                        currentGroupType = item.dataset.type;
+                        closeAllPanels();
+                        loadMessages();
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error loading groups:', error);
         }
-
-        function removeTypingIndicator() {
-            const indicator = document.getElementById('typing-indicator');
-            if (indicator) indicator.remove();
+    }
+    
+    // Create Group
+    async function createGroup(name, description, avatar, memberIds) {
+        try {
+            const response = await fetch('/api/chat/groups/create/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    avatar: avatar,
+                    member_ids: memberIds
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                currentGroupId = data.group.id;
+                currentGroupType = 'group';
+                closeAllPanels();
+                loadMessages();
+            } else {
+                alert(data.error || 'Failed to create group');
+            }
+        } catch (error) {
+            console.error('Error creating group:', error);
         }
-    })();
+    }
+    
+    // Load Members
+    async function loadMembers() {
+        if (!currentGroupId) return;
+        
+        try {
+            const response = await fetch(`/api/chat/groups/members/?group_id=${currentGroupId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('members-group-name').textContent = data.group_name;
+                const membersList = document.getElementById('members-list');
+                
+                membersList.innerHTML = data.members.map(member => `
+                    <div class="member-item">
+                        <div class="member-avatar">${member.username.charAt(0).toUpperCase()}</div>
+                        <div class="member-info">
+                            <p class="member-name">${escapeHtml(member.username)}${member.is_current_user ? ' (You)' : ''}</p>
+                            <p class="member-email">${escapeHtml(member.email)}</p>
+                        </div>
+                        <span class="member-role">${member.role}</span>
+                    </div>
+                `).join('');
+                
+                // Show add member section for admins
+                const currentUserMember = data.members.find(m => m.is_current_user);
+                if (currentUserMember && ['admin', 'moderator'].includes(currentUserMember.role)) {
+                    document.getElementById('add-member-section').style.display = 'flex';
+                } else {
+                    document.getElementById('add-member-section').style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Error loading members:', error);
+        }
+    }
+    
+    // Add Member
+    async function addMember(email) {
+        if (!currentGroupId || !email) return;
+        
+        try {
+            const response = await fetch('/api/chat/groups/add-member/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    group_id: currentGroupId,
+                    email: email
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                document.getElementById('add-member-email').value = '';
+                loadMembers();
+            } else {
+                alert(data.error || 'Failed to add member');
+            }
+        } catch (error) {
+            console.error('Error adding member:', error);
+        }
+    }
+    
+    // Leave Group
+    async function leaveGroup() {
+        if (!currentGroupId) return;
+        
+        if (!confirm('Are you sure you want to leave this group?')) return;
+        
+        try {
+            const response = await fetch('/api/chat/groups/leave/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    group_id: currentGroupId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                currentGroupId = null;
+                currentGroupType = 'support';
+                loadMessages();
+            } else {
+                alert(data.error || 'Failed to leave group');
+            }
+        } catch (error) {
+            console.error('Error leaving group:', error);
+        }
+    }
+    
+    // Search Users
+    async function searchUsers(query) {
+        if (query.length < 2) {
+            document.getElementById('search-results').innerHTML = '';
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/chat/users/search/?q=${encodeURIComponent(query)}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const resultsDiv = document.getElementById('search-results');
+                
+                const filteredUsers = data.users.filter(u => !selectedMembers.some(m => m.id === u.id));
+                
+                resultsDiv.innerHTML = filteredUsers.map(user => `
+                    <div class="search-result-item" data-id="${user.id}" data-email="${user.email}" data-username="${user.username}">
+                        ${escapeHtml(user.username)} (${escapeHtml(user.email)})
+                    </div>
+                `).join('');
+                
+                resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const user = {
+                            id: parseInt(item.dataset.id),
+                            email: item.dataset.email,
+                            username: item.dataset.username
+                        };
+                        selectedMembers.push(user);
+                        renderSelectedMembers();
+                        document.getElementById('member-search').value = '';
+                        resultsDiv.innerHTML = '';
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error searching users:', error);
+        }
+    }
+    
+    // Render Selected Members
+    function renderSelectedMembers() {
+        const container = document.getElementById('selected-members');
+        container.innerHTML = selectedMembers.map(m => `
+            <div class="selected-member" data-id="${m.id}">
+                ${escapeHtml(m.username)}
+                <span class="remove-member" data-id="${m.id}">✕</span>
+            </div>
+        `).join('');
+        
+        container.querySelectorAll('.remove-member').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(btn.dataset.id);
+                selectedMembers = selectedMembers.filter(m => m.id !== id);
+                renderSelectedMembers();
+            });
+        });
+    }
+    
+    // Close All Panels
+    function closeAllPanels() {
+        groupsPanel.style.display = 'none';
+        createGroupPanel.style.display = 'none';
+        membersPanel.style.display = 'none';
+    }
+    
+    // Escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Event Listeners
+    toggleBtn.addEventListener('click', toggleChat);
+    minimizeBtn.addEventListener('click', toggleChat);
+    
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (text) {
+            sendMessage(text);
+            chatInput.value = '';
+            sendTypingIndicator(false);
+        }
+    });
+    
+    // Typing indicator on input
+    chatInput.addEventListener('input', () => {
+        sendTypingIndicator(true);
+        
+        // Clear previous timeout
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+        
+        // Stop typing after 2 seconds of no input
+        typingTimeout = setTimeout(() => {
+            sendTypingIndicator(false);
+        }, 2000);
+    });
+    
+    groupsBtn.addEventListener('click', () => {
+        closeAllPanels();
+        groupsPanel.style.display = 'flex';
+        loadGroups();
+    });
+    
+    newGroupBtn.addEventListener('click', () => {
+        closeAllPanels();
+        createGroupPanel.style.display = 'flex';
+        selectedMembers = [];
+        renderSelectedMembers();
+    });
+    
+    closeGroupsPanel.addEventListener('click', () => {
+        groupsPanel.style.display = 'none';
+    });
+    
+    closeCreatePanel.addEventListener('click', () => {
+        createGroupPanel.style.display = 'none';
+    });
+    
+    closeMembersPanel.addEventListener('click', () => {
+        membersPanel.style.display = 'none';
+    });
+    
+    viewMembersBtn.addEventListener('click', () => {
+        closeAllPanels();
+        membersPanel.style.display = 'flex';
+        loadMembers();
+    });
+    
+    leaveGroupBtn.addEventListener('click', leaveGroup);
+    
+    document.getElementById('add-member-btn').addEventListener('click', () => {
+        const email = document.getElementById('add-member-email').value.trim();
+        if (email) {
+            addMember(email);
+        }
+    });
+    
+    document.getElementById('create-group-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = document.getElementById('new-group-name').value.trim();
+        const description = document.getElementById('new-group-description').value.trim();
+        const avatar = document.getElementById('new-group-avatar').value;
+        const memberIds = selectedMembers.map(m => m.id);
+        
+        if (name) {
+            createGroup(name, description, avatar, memberIds);
+        }
+    });
+    
+    document.getElementById('member-search').addEventListener('input', (e) => {
+        searchUsers(e.target.value);
+    });
+})();
 </script>
