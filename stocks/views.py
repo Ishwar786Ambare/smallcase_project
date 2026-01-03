@@ -116,7 +116,7 @@ def logout_view(request):
 
 # ============ Stock and Basket Views ============
 
-@login_required
+# @login_required
 def home(request):
     """Home page showing all stocks and baskets"""
     # OPTIMIZATION: Remove automatic price updates on page load
@@ -124,25 +124,31 @@ def home(request):
     
     # OPTIMIZATION: Use select_related and prefetch_related to reduce queries
     stocks = Stock.objects.all().order_by('symbol')
-    # Filter baskets to show only user's baskets
-    baskets = Basket.objects.filter(user=request.user).prefetch_related(
-        Prefetch('items', queryset=BasketItem.objects.select_related('stock'))
-    ).order_by('-created_at')
     
-    # Calculate total invested using database aggregation
-    total_invested = baskets.aggregate(Sum('investment_amount'))['investment_amount__sum'] or 0
-    
-    # OPTIMIZATION: Cache basket calculations
+    baskets = []
+    total_invested = 0
     total_current_value = 0
-    for basket in baskets:
-        cache_key = f'basket_value_{basket.id}_{basket.updated_at.timestamp()}'
-        basket_value = cache.get(cache_key)
-        if basket_value is None:
-            basket_value = basket.get_total_value()
-            cache.set(cache_key, basket_value, 300)  # Cache for 5 minutes
-        total_current_value += basket_value
+    total_profit_loss = 0
     
-    total_profit_loss = total_current_value - float(total_invested)
+    if request.user.is_authenticated:
+        # Filter baskets to show only user's baskets
+        baskets = Basket.objects.filter(user=request.user).prefetch_related(
+            Prefetch('items', queryset=BasketItem.objects.select_related('stock'))
+        ).order_by('-created_at')
+        
+        # Calculate total invested using database aggregation
+        total_invested = baskets.aggregate(Sum('investment_amount'))['investment_amount__sum'] or 0
+        
+        # OPTIMIZATION: Cache basket calculations
+        for basket in baskets:
+            cache_key = f'basket_value_{basket.id}_{basket.updated_at.timestamp()}'
+            basket_value = cache.get(cache_key)
+            if basket_value is None:
+                basket_value = basket.get_total_value()
+                cache.set(cache_key, basket_value, 300)  # Cache for 5 minutes
+            total_current_value += basket_value
+        
+        total_profit_loss = total_current_value - float(total_invested)
 
     context = {
         'stocks': stocks,

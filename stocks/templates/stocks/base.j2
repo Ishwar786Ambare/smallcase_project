@@ -42,7 +42,7 @@
         --empty-state-color: #64748b;
     }
 
-    {% block css %}
+
 
     * {
         margin: 0;
@@ -92,31 +92,371 @@
         transform: rotate(20deg);
     }
 
-    {% endblock %}
+    /* Header Styles */
+    .main-header {
+        background: var(--container-bg);
+        border-bottom: 2px solid var(--border-color);
+        box-shadow: 0 4px 15px var(--shadow-light);
+        padding: 0;
+        margin: -20px -20px 30px -20px;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+
+    .header-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-decoration: none;
+        color: var(--text-primary);
+        font-size: 1.5em;
+        font-weight: 700;
+        transition: transform 0.3s ease;
+    }
+
+    .logo:hover {
+        transform: scale(1.05);
+    }
+
+    .logo-icon {
+        font-size: 1.8em;
+    }
+
+    .nav-menu {
+        display: flex;
+        align-items: center;
+        gap: 25px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-menu a {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 16px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .nav-menu a:hover {
+        background: var(--card-bg);
+        transform: translateY(-2px);
+    }
+
+    .nav-menu a.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 8px 16px;
+        background: var(--card-bg);
+        border-radius: 50px;
+        border: 1px solid var(--border-color);
+    }
+
+    .user-name {
+        color: var(--text-primary);
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .user-email {
+        color: var(--text-secondary);
+        font-size: 0.85em;
+    }
+
+    .btn-logout {
+        background: #fee2e2;
+        color: #ef4444;
+        padding: 6px 14px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+    }
+
+    .btn-logout:hover {
+        background: #ef4444;
+        color: white;
+        border-color: #dc2626;
+    }
+
+    .btn-auth {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-auth:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Footer Styles */
+    .main-footer {
+        background: var(--container-bg);
+        border-top: 2px solid var(--border-color);
+        margin: 50px -20px -20px -20px;
+        padding: 40px 30px 20px;
+        box-shadow: 0 -4px 15px var(--shadow-light);
+    }
+
+    .footer-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .footer-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 40px;
+        margin-bottom: 30px;
+    }
+
+    .footer-section h3 {
+        color: var(--text-primary);
+        margin-bottom: 15px;
+        font-size: 1.2em;
+    }
+
+    .footer-section p {
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 10px;
+    }
+
+    .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .footer-links li {
+        margin-bottom: 10px;
+    }
+
+    .footer-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .footer-links a:hover {
+        color: #667eea;
+    }
+
+    .social-links {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+    }
+
+    .social-links a {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--card-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 1.2em;
+    }
+
+    .social-links a:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .footer-bottom {
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.9em;
+    }
+
+    .footer-bottom a {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .footer-bottom a:hover {
+        text-decoration: underline;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+        .header-container {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .nav-menu {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .user-info {
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        body {
+            padding: 10px;
+        }
+
+        .main-header,
+        .main-footer {
+            margin-left: -10px;
+            margin-right: -10px;
+        }
+    }
+
+    {% block css %}{% endblock %}
 
     </style>
     <title>{% block title %}Document{% endblock %}</title>
 </head>
 <body>
+    <!-- Main Header -->
+    <header class="main-header">
+        <div class="header-container">
+            <a href="{{ url('home') if request.user.is_authenticated else url('login') }}" class="logo">
+                <span class="logo-icon">📊</span>
+                <span>StockBasket</span>
+            </a>
+
+            {% if request.user.is_authenticated %}
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="{{ url('home') }}">🏠 Dashboard</a></li>
+                    <li><a href="{{ url('basket_create') }}">➕ Create Basket</a></li>
+                    <li><a href="{{ url('populate_stocks') }}">📥 Load Stocks</a></li>
+                    <li><a href="{{ url('update_prices') }}">🔄 Update Prices</a></li>
+                </ul>
+            </nav>
+
+            <div class="user-info">
+                <div>
+                    <div class="user-name">👤 {{ request.user.username }}</div>
+                    <div class="user-email">{{ request.user.email }}</div>
+                </div>
+                <a href="{{ url('logout') }}" class="btn-logout">Logout</a>
+            </div>
+            {% else %}
+            <div style="display: flex; gap: 15px;">
+                <a href="{{ url('login') }}" class="btn-auth">Login</a>
+                <a href="{{ url('signup') }}" class="btn-auth">Sign Up</a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+
     <!-- Theme Toggle Button -->
     <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
         <span class="theme-icon" id="themeIcon">🌙</span>
         <span class="theme-text" id="themeText">Dark</span>
     </button>
 
-    <!-- User Navigation -->
-    {% if request.user.is_authenticated %}
-    <div style="position: fixed; top: 20px; left: 20px; z-index: 1000; background: var(--container-bg); border: 2px solid var(--border-color); border-radius: 50px; padding: 10px 20px; box-shadow: 0 4px 15px var(--shadow-light); display: flex; align-items: center; gap: 15px;">
-        <span style="color: var(--text-primary); font-weight: 500;">👤 {{ request.user.username }}</span>
-        <span style="color: var(--text-secondary); font-size: 0.9em;">({{ request.user.email }})</span>
-        <a href="{{ url('logout') }}" style="color: #ef4444; text-decoration: none; font-weight: 500; padding: 5px 12px; background: #fee2e2; border-radius: 20px; transition: all 0.3s ease;" onmouseover="this.style.background='#ef4444'; this.style.color='white'" onmouseout="this.style.background='#fee2e2'; this.style.color='#ef4444'">Logout</a>
-    </div>
-    {% endif %}
-
     {% block content %}
     {% endblock %}
-    {% block footer %}
-    {% endblock %}
+    
+    <!-- Main Footer -->
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>📊 StockBasket</h3>
+                    <p>Your intelligent stock portfolio management platform. Create equal-weighted baskets and track your investments with ease.</p>
+                    <div class="social-links">
+                        <a href="#" title="GitHub">🐙</a>
+                        <a href="#" title="Twitter">🐦</a>
+                        <a href="#" title="LinkedIn">💼</a>
+                        <a href="#" title="Discord">💬</a>
+                    </div>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul class="footer-links">
+                        {% if request.user.is_authenticated %}
+                        <li><a href="{{ url('home') }}">🏠 Dashboard</a></li>
+                        <li><a href="{{ url('basket_create') }}">➕ Create Basket</a></li>
+                        <li><a href="{{ url('populate_stocks') }}">📥 Load Stocks</a></li>
+                        <li><a href="{{ url('update_prices') }}">🔄 Update Prices</a></li>
+                        {% else %}
+                        <li><a href="{{ url('login') }}">🔐 Login</a></li>
+                        <li><a href="{{ url('signup') }}">✨ Sign Up</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Resources</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">📖 Documentation</a></li>
+                        <li><a href="#">💡 Investment Guide</a></li>
+                        <li><a href="#">📈 Market Analysis</a></li>
+                        <li><a href="#">❓ FAQ</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>Support</h3>
+                    <ul class="footer-links">
+                        <li><a href="#">📧 Contact Us</a></li>
+                        <li><a href="#">🛡️ Privacy Policy</a></li>
+                        <li><a href="#">📜 Terms of Service</a></li>
+                        <li><a href="#">🔒 Security</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>© 2026 StockBasket. All rights reserved. | Made with ❤️ for smart investors</p>
+                <p style="margin-top: 10px; font-size: 0.85em;">
+                    <strong>Disclaimer:</strong> This is for educational purposes only. Not financial advice. Always do your own research.
+                </p>
+            </div>
+        </div>
+    </footer>
     
     <!-- Base Theme Toggle Script -->
     <script>
