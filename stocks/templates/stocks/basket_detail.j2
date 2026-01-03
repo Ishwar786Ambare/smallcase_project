@@ -598,7 +598,10 @@
             </tr>
         </thead>
         <tbody>
+            {% set total = namespace(qty=0, invested=0) %}
             {% for item in items %}
+            {% set total.qty = total.qty + item.quantity %}
+            {% set total.invested = total.invested + item.allocated_amount %}
             <tr data-item-id="{{ item.id }}">
                 <td>
                     <strong>{{ item.stock.symbol }}</strong><br>
@@ -651,6 +654,18 @@
                 </td>
             </tr>
             {% endfor %}
+            <tr style="font-weight: 700; background-color: rgba(102, 126, 234, 0.05); border-top: 2px solid var(--border-color);">
+                <td>Total of all</td>
+                <td>100%</td>
+                <td>{{ total.qty|int }}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>₹{{ total.invested|round(2) }}</td>
+                <td>₹{{ total_current_value|round(2) }}</td>
+                <td class="{% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
+                    ₹{{ total_profit_loss|round(2) }}
+                </td>
+            </tr>
         </tbody>
     </table>
 
