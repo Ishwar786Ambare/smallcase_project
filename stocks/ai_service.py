@@ -1,0 +1,347 @@
+"""
+AI Service Module for Chat Support
+Supports both Groq (Llama 3) and Google Gemini with configurable provider selection.
+"""
+
+import os
+import json
+from abc import ABC, abstractmethod
+from django.conf import settings
+
+
+class AIProvider(ABC):
+    """Abstract base class for AI providers"""
+    
+    @abstractmethod
+    def generate_response(self, user_message: str, context: dict) -> str:
+        """Generate a response based on user message and context"""
+        pass
+    
+    def build_system_prompt(self, context: dict) -> str:
+        """Build system prompt with user's portfolio context"""
+        
+        # Debug: Print context
+        print(f"[AI Service] build_system_prompt - context baskets count: {len(context.get('baskets', []))}")
+        
+        # Check if user is admin
+        is_admin = context.get('is_admin', False)
+        has_baskets = bool(context.get('baskets'))
+        
+        print(f"[AI Service] has_baskets: {has_baskets}, is_admin: {is_admin}")
+        
+        # Build baskets info only if user has baskets
+        baskets_info = ""
+        total_info = ""
+        
+        if has_baskets:
+            baskets_info = "\n\nUser's Investment Baskets:\n"
+            for basket in context['baskets']:
+                baskets_info += f"""
+- Basket: {basket['name']}
+  - Investment: ₹{basket['investment']:,.2f}
+  - Current Value: ₹{basket['current_value']:,.2f}
+  - Profit/Loss: ₹{basket['profit_loss']:,.2f} ({basket['profit_loss_percent']:.2f}%)
+  - Stocks: {', '.join([f"{s['symbol']} ({s['weight']}%)" for s in basket['stocks']])}
+"""
+            
+            if context.get('total_investment', 0) > 0:
+                total_info = f"""
+Total Portfolio Summary:
+- Total Investment: ₹{context['total_investment']:,.2f}
+- Total Current Value: ₹{context['total_value']:,.2f}
+- Total Profit/Loss: ₹{context['total_profit_loss']:,.2f} ({context['total_profit_loss_percent']:.2f}%)
+"""
+        
+        # Different prompts based on user type and basket status
+        if is_admin:
+            role_info = """
+You are an AI assistant for the Smallcase platform admin team.
+The current user is an ADMIN/SUPERUSER of the platform.
+You can help them with:
+1. General questions about the platform
+2. Investment concepts and strategies
+3. Platform features and functionality
+4. Any administrative queries
+
+If they ask about their personal portfolio and they don't have baskets, let them know they haven't created any baskets yet.
+"""
+        elif has_baskets:
+            role_info = """
+You are a helpful AI investment assistant for a stock portfolio management app called "Smallcase". 
+Your role is to:
+1. Answer questions about the user's investment portfolios and baskets
+2. Provide insights about their stock holdings
+3. Explain investment concepts in simple terms
+4. Help users understand their portfolio performance
+5. Suggest portfolio optimization when asked
+
+IMPORTANT: Only discuss the user's baskets and investments that are provided in the context.
+Do not make up or assume any investment data.
+"""
+        else:
+            role_info = """
+You are a helpful AI assistant for a stock portfolio management app called "Smallcase". 
+The user does NOT have any investment baskets yet.
+
+Your role is to:
+1. Welcome them and explain how to create a basket
+2. Explain investment concepts in simple terms
+3. Help them understand the platform features
+4. Encourage them to create their first investment basket
+
+IMPORTANT: Do NOT provide any portfolio or basket information since the user has no baskets.
+If they ask about their portfolio, politely let them know they haven't created any baskets yet and guide them to create one.
+"""
+        
+        system_prompt = f"""{role_info}
+
+Be friendly, professional, and concise. Use ₹ for Indian Rupees.
+If you don't know something specific, say so and offer to connect them with human support.
+{baskets_info}
+{total_info}
+
+Current User: {context.get('user_email', 'Guest')}
+User Name: {context.get('user_name', 'User')}
+Is Admin: {'Yes' if is_admin else 'No'}
+Has Baskets: {'Yes' if has_baskets else 'No'}
+"""
+        return system_prompt
+
+
+class GroqProvider(AIProvider):
+    """Groq AI Provider using Llama 3"""
+    
+    def __init__(self):
+        from groq import Groq
+        api_key = os.environ.get('GROQ_API_KEY', getattr(settings, 'GROQ_API_KEY', None))
+        if not api_key:
+            raise ValueError("GROQ_API_KEY is not set")
+        self.client = Groq(api_key=api_key)
+        self.model = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
+    
+    def generate_response(self, user_message: str, context: dict) -> str:
+        try:
+            system_prompt = self.build_system_prompt(context)
+            
+            chat_completion = self.client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                model=self.model,
+                temperature=0.7,
+                max_tokens=1024,
+            )
+            
+            return chat_completion.choices[0].message.content
+            
+        except Exception as e:
+            print(f"Groq API Error: {e}")
+            return f"I'm having trouble connecting right now. Please try again or contact human support. Error: {str(e)}"
+
+
+class GeminiProvider(AIProvider):
+    """Google Gemini AI Provider"""
+    
+    def __init__(self):
+        import google.generativeai as genai
+        api_key = os.environ.get('GEMINI_API_KEY', getattr(settings, 'GEMINI_API_KEY', None))
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is not set")
+        genai.configure(api_key=api_key)
+        model_name = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+        self.model = genai.GenerativeModel(model_name)
+    
+    def generate_response(self, user_message: str, context: dict) -> str:
+        try:
+            system_prompt = self.build_system_prompt(context)
+            
+            full_prompt = f"{system_prompt}\n\nUser: {user_message}\n\nAssistant:"
+            
+            response = self.model.generate_content(
+                full_prompt,
+                generation_config={
+                    "temperature": 0.7,
+                    "max_output_tokens": 1024,
+                }
+            )
+            
+            return response.text
+            
+        except Exception as e:
+            print(f"Gemini API Error: {e}")
+            return f"I'm having trouble connecting right now. Please try again or contact human support. Error: {str(e)}"
+
+
+class AIService:
+    """Main AI Service that manages provider selection"""
+    
+    _instance = None
+    _provider = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def get_provider(self) -> AIProvider:
+        """Get the configured AI provider"""
+        provider_name = os.environ.get('AI_PROVIDER', getattr(settings, 'AI_PROVIDER', 'groq')).lower()
+        
+        if provider_name == 'gemini':
+            return GeminiProvider()
+        else:  # Default to Groq
+            return GroqProvider()
+    
+    def generate_response(self, user_message: str, user) -> str:
+        """Generate AI response with user's portfolio context"""
+        from .models import Basket
+        
+        print(f"[AI Service] generate_response called for user: {user.email if user else 'None'}")
+        
+        # Build context from user's baskets
+        context = {
+            'user_email': user.email if user else 'Guest',
+            'user_name': user.username or user.email.split('@')[0] if user else 'User',
+            'is_admin': user.is_staff or user.is_superuser if user else False,
+            'baskets': [],
+            'total_investment': 0,
+            'total_value': 0,
+            'total_profit_loss': 0,
+            'total_profit_loss_percent': 0,
+        }
+        
+        if user and user.is_authenticated:
+            # Get only the user's baskets
+            try:
+                baskets = Basket.objects.filter(user=user).prefetch_related('items__stock')
+                print(f"[AI Service] Found {baskets.count()} baskets for user {user.email}")
+                
+                for basket in baskets:
+                    print(f"[AI Service] Processing basket: {basket.name}")
+                    try:
+                        current_value = basket.get_total_value() or 0
+                        profit_loss = basket.get_profit_loss() or 0
+                        profit_loss_percent = basket.get_profit_loss_percentage() or 0
+                        
+                        basket_data = {
+                            'name': basket.name or 'Unnamed Basket',
+                            'investment': float(basket.investment_amount or 0),
+                            'current_value': float(current_value),
+                            'profit_loss': float(profit_loss),
+                            'profit_loss_percent': float(profit_loss_percent),
+                            'stocks': []
+                        }
+                        
+                        for item in basket.items.all():
+                            try:
+                                basket_data['stocks'].append({
+                                    'symbol': item.stock.symbol if item.stock else 'N/A',
+                                    'name': item.stock.name if item.stock else 'Unknown',
+                                    'weight': float(item.weight_percentage or 0),
+                                    'quantity': float(item.quantity or 0),
+                                    'purchase_price': float(item.purchase_price or 0),
+                                    'current_price': float(item.stock.current_price) if item.stock and item.stock.current_price else 0,
+                                })
+                            except Exception as item_err:
+                                print(f"[AI Service] Error processing basket item: {item_err}")
+                                import traceback
+                                traceback.print_exc()
+                                continue
+                        
+                        print(f"[AI Service] About to append basket_data for: {basket_data['name']}")
+                        context['baskets'].append(basket_data)
+                        print(f"[AI Service] Successfully appended! Total baskets in context: {len(context['baskets'])}")
+                        context['total_investment'] += basket_data['investment']
+                        context['total_value'] += basket_data['current_value']
+                    except Exception as basket_err:
+                        print(f"[AI Service] Error processing basket {basket.id}: {basket_err}")
+                        import traceback
+                        traceback.print_exc()
+                        continue
+                
+                context['total_profit_loss'] = context['total_value'] - context['total_investment']
+                if context['total_investment'] > 0:
+                    context['total_profit_loss_percent'] = (context['total_profit_loss'] / context['total_investment']) * 100
+            except Exception as e:
+                print(f"Error fetching baskets: {e}")
+                # Continue with empty baskets
+        
+        try:
+            provider = self.get_provider()
+            return provider.generate_response(user_message, context)
+        except ValueError as e:
+            # API key not configured - return a helpful message
+            return self._get_fallback_response(user_message, context)
+        except Exception as e:
+            print(f"AI Service Error: {e}")
+            return self._get_fallback_response(user_message, context)
+    
+    def _get_fallback_response(self, user_message: str, context: dict) -> str:
+        """Fallback response when AI is not configured"""
+        user_message_lower = user_message.lower()
+        is_admin = context.get('is_admin', False)
+        has_baskets = bool(context.get('baskets'))
+        
+        # Simple rule-based responses for common questions
+        if any(word in user_message_lower for word in ['hi', 'hello', 'hey']):
+            name = context.get('user_name', 'there')
+            if is_admin:
+                return f"Hello {name}! 👋 Welcome back, Admin! I'm your AI assistant. How can I help you today?"
+            elif has_baskets:
+                return f"Hello {name}! 👋 I'm your portfolio assistant. How can I help you today? You can ask me about your baskets, stock performance, or investment strategies."
+            else:
+                return f"Hello {name}! 👋 Welcome to Smallcase! I noticed you haven't created any investment baskets yet. Would you like me to guide you on how to create your first basket?"
+        
+        elif any(word in user_message_lower for word in ['portfolio', 'basket', 'investment', 'stock']):
+            if has_baskets:
+                total = context.get('total_investment', 0)
+                value = context.get('total_value', 0)
+                pl = context.get('total_profit_loss', 0)
+                pl_pct = context.get('total_profit_loss_percent', 0)
+                emoji = "📈" if pl >= 0 else "📉"
+                
+                return f"""Here's your portfolio summary {emoji}:
+
+💰 Total Investment: ₹{total:,.2f}
+💵 Current Value: ₹{value:,.2f}
+{'✅' if pl >= 0 else '❌'} Profit/Loss: ₹{pl:,.2f} ({pl_pct:.2f}%)
+
+You have {len(context['baskets'])} basket(s). Would you like details on a specific one?"""
+            else:
+                return """You don't have any investment baskets yet! 📊
+
+To create your first basket:
+1. Go to the **Baskets** section
+2. Click **Create New Basket**
+3. Add stocks and set your investment amount
+
+Would you like me to explain more about how baskets work? 🚀"""
+        
+        elif 'help' in user_message_lower:
+            if has_baskets:
+                return """I can help you with:
+📊 Portfolio performance and analysis
+💼 Basket details and stock holdings
+📈 Profit/Loss calculations
+💡 Investment insights
+
+Just ask me anything about your investments!"""
+            else:
+                return """I can help you with:
+🆕 Creating your first investment basket
+📚 Understanding investment concepts
+🎯 Platform features and navigation
+💡 Getting started tips
+
+What would you like to know?"""
+        
+        else:
+            if is_admin:
+                return "Thanks for your message! As an admin, you have access to all platform features. How can I assist you today? 🛠️"
+            else:
+                return "Thanks for your message! I'm here to help with your investment queries. A human support agent will review this and get back to you soon. 🙏"
+
+
+# Singleton instance
+ai_service = AIService()

@@ -1202,3 +1202,51 @@ def chat_search_users(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ============ AI Chat Support ============
+
+@login_required
+def ai_chat(request):
+    """API endpoint for AI-powered chat responses"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'})
+    
+    try:
+        data = json.loads(request.body) if request.body else {}
+        user_message = data.get('message', '').strip()
+        
+        if not user_message:
+            return JsonResponse({'success': False, 'error': 'Message is required'})
+        
+        # Debug: Print user info
+        print(f"AI Chat - User: {request.user.email}, ID: {request.user.id}")
+        
+        # Debug: Check baskets for this user
+        from .models import Basket
+        user_baskets = Basket.objects.filter(user=request.user)
+        print(f"AI Chat - User has {user_baskets.count()} baskets")
+        for b in user_baskets:
+            print(f"  - Basket: {b.name}, ID: {b.id}")
+        
+        # Import AI service
+        from .ai_service import ai_service
+        
+        # Generate AI response with user's portfolio context
+        ai_response = ai_service.generate_response(user_message, request.user)
+        
+        return JsonResponse({
+            'success': True,
+            'response': ai_response,
+            'is_ai': True
+        })
+        
+    except Exception as e:
+        print(f"AI Chat Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False, 
+            'error': str(e),
+            'response': "I'm having trouble right now. Please try again or contact human support."
+        })

@@ -1053,6 +1053,11 @@
                 message_type: 'text',
                 created_at: time
             });
+            
+            // Get AI response for support chat
+            console.log('Getting AI response, currentGroupType:', currentGroupType);
+            console.log('Getting AI response, content:', content);
+            getAIResponse(content);
         } else {
             // Fallback to HTTP API if WebSocket not available
             sendMessageHTTP(content);
@@ -1079,9 +1084,69 @@
             if (data.success) {
                 currentGroupId = data.group_id;
                 addMessageToUI(data.message);
+                
+                // Get AI response for support chat
+                if (currentGroupType === 'support') {
+                    getAIResponse(content);
+                }
             }
         } catch (error) {
             console.error('Error sending message:', error);
+        }
+    }
+    
+    // Get AI Response for support chat
+    async function getAIResponse(userMessage) {
+        try {
+            // Show typing indicator
+            showTypingIndicator('AI Assistant', true);
+            
+            const response = await fetch('/api/ai/chat/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    message: userMessage
+                })
+            });
+            
+            const data = await response.json();
+            
+            // Hide typing indicator
+            showTypingIndicator('AI Assistant', false);
+            
+            if (data.success && data.response) {
+                // Save AI response as a message
+                const saveResponse = await fetch('/api/chat/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        content: data.response,
+                        group_id: currentGroupId,
+                        is_ai_response: true
+                    })
+                });
+                
+                const saveData = await saveResponse.json();
+                if (saveData.success) {
+                    addMessageToUI({
+                        id: saveData.message.id,
+                        content: data.response,
+                        sender: '🤖 AI Assistant',
+                        is_own: false,
+                        message_type: 'text',
+                        created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error getting AI response:', error);
+            showTypingIndicator('AI Assistant', false);
         }
     }
     
