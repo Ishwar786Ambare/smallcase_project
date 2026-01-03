@@ -1,0 +1,59 @@
+<!-- Main Footer -->
+<footer class="main-footer">
+    <div class="footer-container">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>📊 StockBasket</h3>
+                <p>Your intelligent stock portfolio management platform. Create equal-weighted baskets and track your investments with ease.</p>
+                <div class="social-links">
+                    <a href="#" title="GitHub">🐙</a>
+                    <a href="#" title="Twitter">🐦</a>
+                    <a href="#" title="LinkedIn">💼</a>
+                    <a href="#" title="Discord">💬</a>
+                </div>
+            </div>
+
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul class="footer-links">
+                    {% if request.user.is_authenticated %}
+                    <li><a href="{{ url('home') }}">🏠 Dashboard</a></li>
+                    <li><a href="{{ url('basket_create') }}">➕ Create Basket</a></li>
+                    <li><a href="{{ url('populate_stocks') }}">📥 Load Stocks</a></li>
+                    <li><a href="{{ url('update_prices') }}">🔄 Update Prices</a></li>
+                    {% else %}
+                    <li><a href="{{ url('login') }}">🔐 Login</a></li>
+                    <li><a href="{{ url('signup') }}">✨ Sign Up</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Resources</h3>
+                <ul class="footer-links">
+                    <li><a href="#">📖 Documentation</a></li>
+                    <li><a href="#">💡 Investment Guide</a></li>
+                    <li><a href="#">📈 Market Analysis</a></li>
+                    <li><a href="#">❓ FAQ</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-section">
+                <h3>Support</h3>
+                <ul class="footer-links">
+                    <li><a href="#">📧 Contact Us</a></li>
+                    <li><a href="#">🛡️ Privacy Policy</a></li>
+                    <li><a href="#">📜 Terms of Service</a></li>
+                    <li><a href="#">🔒 Security</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p>© 2026 StockBasket. All rights reserved. | Made with ❤️ for smart investors</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">
+                <strong>Disclaimer:</strong> This is for educational purposes only. Not financial advice. Always do your own research.
+            </p>
+        </div>
+    </div>
+</footer>
