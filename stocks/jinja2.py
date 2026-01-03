@@ -20,11 +20,14 @@ def round_filter(value, precision=2):
     except (ValueError, TypeError):
         return value
 
+from django.contrib.messages import get_messages
+
 def environment(**options):
     env = Environment(**options)
     env.globals.update({
         'static': static,   
         'url': reverse,
+        'get_messages': get_messages,
     })
     env.filters['count'] = count_queryset
     env.filters['date'] = date

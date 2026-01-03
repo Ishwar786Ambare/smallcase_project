@@ -163,6 +163,7 @@
 {% endblock %}
 
 {% block content %}
+{% set messages = get_messages(request) %}
 <div class="contact-container">
     <div class="contact-header">
         <h1>Contact Us</h1>

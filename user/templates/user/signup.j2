@@ -142,6 +142,7 @@
 {% endblock %}
 
 {% block content %}
+{% set messages = get_messages(request) %}
 <div class="auth-container">
     <div class="auth-header">
         <h1>Create Account 🚀</h1>
