@@ -10,10 +10,11 @@
     .container {
         max-width: 1200px;
         margin: 0 auto;
-        background: white;
+        background: var(--container-bg);
         border-radius: 15px;
         padding: 40px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 40px var(--shadow-color);
+        transition: background 0.3s ease, box-shadow 0.3s ease;
     }
 
     .header {
@@ -26,14 +27,16 @@
     }
 
     h1 {
-        color: #333;
+        color: var(--text-primary);
         font-size: 2.2em;
+        transition: color 0.3s ease;
     }
 
     .description {
-        color: #666;
+        color: var(--text-secondary);
         margin-bottom: 30px;
         font-size: 1.05em;
+        transition: color 0.3s ease;
     }
 
     .stats-grid {
@@ -48,7 +51,13 @@
         color: white;
         padding: 25px;
         border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px var(--shadow-light);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px var(--shadow-light);
     }
 
     .stat-label {
@@ -126,19 +135,21 @@
 
     .section-title {
         font-size: 1.6em;
-        color: #333;
+        color: var(--text-primary);
         margin-bottom: 20px;
         border-bottom: 3px solid #667eea;
         padding-bottom: 10px;
+        transition: color 0.3s ease;
     }
 
     .stocks-table {
         width: 100%;
         border-collapse: collapse;
-        background: white;
+        background: var(--container-bg);
         border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 10px var(--shadow-lighter);
+        transition: background 0.3s ease, box-shadow 0.3s ease;
     }
 
     .stocks-table th {
@@ -151,11 +162,13 @@
 
     .stocks-table td {
         padding: 15px;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        transition: color 0.3s ease, border-color 0.3s ease;
     }
 
     .stocks-table tr:hover {
-        background: #f3f4f6;
+        background: var(--table-hover);
     }
 
     .stocks-table tr:last-child td {
@@ -183,21 +196,24 @@
     }
 
     .info-box {
-        background: #f0f9ff;
+        background: var(--card-bg);
         border-left: 4px solid #667eea;
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 30px;
+        transition: background 0.3s ease;
     }
 
     .info-box h3 {
-        color: #333;
+        color: var(--text-primary);
         margin-bottom: 10px;
+        transition: color 0.3s ease;
     }
 
     .info-box p {
-        color: #666;
+        color: var(--text-secondary);
         line-height: 1.6;
+        transition: color 0.3s ease;
     }
 
     /* Edit mode styles */
@@ -212,6 +228,9 @@
         border-radius: 6px;
         font-size: 0.95em;
         text-align: center;
+        background: var(--container-bg);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
     }
 
     .edit-input:focus {
@@ -234,7 +253,7 @@
     }
 
     .display-value:hover {
-        background: #f3f4f6;
+        background: var(--table-hover);
     }
 
     .edit-icon {
@@ -271,6 +290,51 @@
         background: #d1fae5;
         color: #065f46;
         border-left: 4px solid #10b981;
+    }
+
+    /* Dark mode chart styles */
+    .chart-section {
+        margin: 30px 0;
+        padding: 25px;
+        background: var(--container-bg);
+        border-radius: 12px;
+        box-shadow: 0 2px 8px var(--shadow-lighter);
+        transition: all 0.3s ease;
+    }
+
+    .period-btn {
+        padding: 6px 12px;
+        border: 1px solid var(--border-color);
+        background: var(--container-bg);
+        color: var(--text-primary);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.3s ease;
+    }
+
+    .period-btn.active {
+        border: 1px solid #667eea;
+        background: #667eea;
+        color: white;
+    }
+
+    .period-btn:hover:not(.active) {
+        background: var(--card-bg);
+    }
+
+    .note-box {
+        margin-top: 30px;
+        padding: 20px;
+        background: var(--card-bg);
+        border-radius: 10px;
+        transition: background 0.3s ease;
+    }
+
+    .note-box p {
+        color: var(--text-secondary);
+        font-size: 0.95em;
+        transition: color 0.3s ease;
     }
 {% endblock %}
 
@@ -329,24 +393,24 @@
     </div>
 
     <!-- Performance Comparison Chart -->
-    <div class="chart-section" style="margin: 30px 0; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div class="chart-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
             <h2 class="section-title" style="margin: 0;">📈 Performance Comparison</h2>
             <div class="period-selector" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button class="period-btn" data-period="1d" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">1D</button>
-                <button class="period-btn" data-period="7d" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">7D</button>
-                <button class="period-btn active" data-period="1m" style="padding: 6px 12px; border: 1px solid #667eea; background: #667eea; color: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">1M</button>
-                <button class="period-btn" data-period="3m" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">3M</button>
-                <button class="period-btn" data-period="6m" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">6M</button>
-                <button class="period-btn" data-period="1y" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">1Y</button>
-                <button class="period-btn" data-period="3y" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">3Y</button>
-                <button class="period-btn" data-period="5y" style="padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; font-size: 0.9em;">5Y</button>
+                <button class="period-btn" data-period="1d">1D</button>
+                <button class="period-btn" data-period="7d">7D</button>
+                <button class="period-btn active" data-period="1m">1M</button>
+                <button class="period-btn" data-period="3m">3M</button>
+                <button class="period-btn" data-period="6m">6M</button>
+                <button class="period-btn" data-period="1y">1Y</button>
+                <button class="period-btn" data-period="3y">3Y</button>
+                <button class="period-btn" data-period="5y">5Y</button>
             </div>
         </div>
         <div style="position: relative; height: 400px;">
             <canvas id="performanceChart"></canvas>
         </div>
-        <div id="performance-summary" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #eee;">
+        <div id="performance-summary" style="margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color);">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                 <div style="padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
                     <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">Your Basket: ₹100 invested →</div>
@@ -360,7 +424,7 @@
                 </div>
             </div>
         </div>
-        <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9em;">
+        <div style="margin-top: 15px; text-align: center; color: var(--text-secondary); font-size: 0.9em;">
             Performance comparison: Value of ₹100 invested over selected time period
         </div>
     </div>
@@ -437,8 +501,8 @@
         </tbody>
     </table>
 
-    <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 10px;">
-        <p style="color: #666; font-size: 0.95em;">
+    <div class="note-box">
+        <p>
             <strong>Note:</strong> Stock prices are fetched from Yahoo Finance and may have a slight delay.
             Click on the weight or quantity values to edit them. When you change one, the other will automatically adjust.
             Created on: {{ basket.created_at }}

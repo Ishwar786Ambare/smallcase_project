@@ -5,10 +5,11 @@
     .container {
         max-width: 1200px;
         margin: 0 auto;
-        background: white;
+        background: var(--container-bg);
         border-radius: 15px;
         padding: 40px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 40px var(--shadow-color);
+        transition: background 0.3s ease, box-shadow 0.3s ease;
     }
 
     .header {
@@ -21,8 +22,9 @@
     }
 
     h1 {
-        color: #333;
+        color: var(--text-primary);
         font-size: 2.2em;
+        transition: color 0.3s ease;
     }
 
     .intro-text {
@@ -50,9 +52,11 @@
         border-collapse: separate;
         border-spacing: 0;
         margin: 30px 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-radius: 12px;
+        box-shadow: 0 2px 8px var(--shadow-lighter);
+         border-radius: 12px;
         overflow: hidden;
+        background: var(--container-bg);
+        transition: all 0.3s ease;
     }
 
     .performance-table thead {
@@ -76,12 +80,12 @@
     }
 
     .performance-table tbody tr {
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--border-color);
         transition: all 0.3s ease;
     }
 
     .performance-table tbody tr:hover {
-        background: #f8f9fa;
+        background: var(--table-hover);
         transform: scale(1.01);
     }
 
@@ -92,12 +96,15 @@
     .performance-table td {
         padding: 18px 15px;
         font-size: 1em;
+        color: var(--text-primary);
+        transition: color 0.3s ease;
     }
 
     .period-cell {
         font-weight: 600;
-        color: #333;
+        color: var(--text-primary);
         font-size: 1.1em;
+        transition: color 0.3s ease;
     }
 
     .value-cell {
@@ -212,6 +219,17 @@
         flex-wrap: wrap;
     }
 
+    .loading-section {
+        text-align: center;
+        padding: 40px;
+        color: var(--empty-state-color);
+        transition: color 0.3s ease;
+    }
+
+    .loading-section p {
+        font-size: 1.2em;
+    }
+
     @media (max-width: 768px) {
         .container {
             padding: 20px;
@@ -311,8 +329,8 @@
     </div>
 
     {% else %}
-    <div style="text-align: center; padding: 40px; color: #999;">
-        <p style="font-size: 1.2em;">⏳ Loading performance data...</p>
+    <div class="loading-section">
+        <p>⏳ Loading performance data...</p>
         <p>This may take a few moments as we fetch historical data.</p>
     </div>
     {% endif %}

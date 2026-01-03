@@ -11,13 +11,13 @@ SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Static files
-STATIC_ROOT = '/home/ishwar/smallcase_project/static'
+STATIC_ROOT = '/home/ishwarambare/smallcase_project/static'
 STATIC_URL = '/static/'
 
 # Database (SQLite is fine for free tier)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': '/home/yourusername/smallcase_project/db.sqlite3',
+        'NAME': '/home/ishwarambare/smallcase_project/db.sqlite3',
     }
 }
