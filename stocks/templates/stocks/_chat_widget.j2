@@ -1242,8 +1242,10 @@
             className += 'user-message';
         } else {
             // Check if it's an AI message or admin message
-            const isAI = msg.sender && (msg.sender.includes('AI') || msg.sender.includes('🤖'));
-            const isAdmin = msg.sender && (msg.sender.includes('Support') || msg.sender.includes('Admin'));
+            // AI messages have sender_id = null (no user sender)
+            // Admin messages have a sender (staff user)
+            const isAI = !msg.sender_id || (msg.sender && (msg.sender.includes('AI') || msg.sender.includes('🤖')));
+            const isAdmin = msg.sender_id && msg.sender && (msg.sender.includes('Support') || msg.sender.includes('Admin'));
             
             if (isAI) {
                 className += 'ai-message';

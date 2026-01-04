@@ -799,10 +799,18 @@ def chat_send_message(request):
             is_ai_only = (support_type == 'ai')
             group = get_or_create_support_chat(request.user, is_ai_only=is_ai_only)
         
+        
+        # Note: We rely on frontend to not call AI for admin support chats
+        # Backend blocking removed because existing chats have is_ai_only=False by default
+        
+        # Check if this is an AI response
+        is_ai_response = data.get('is_ai_response', False)
+        
         # Create message
+        # For AI responses, set sender=None so they show as "Support Team" (AI)
         message = ChatMessage.objects.create(
             group=group,
-            sender=request.user,
+            sender=None if is_ai_response else request.user,  # AI messages have no sender
             content=content,
             message_type='text'
         )
