@@ -8,6 +8,27 @@
 
     <!-- Chat Window -->
     <div id="chat-window" class="chat-window" style="display: none;">
+        <!-- Support Type Selection (shown first time) -->
+        <div id="support-type-panel" class="support-type-panel" style="display: none;">
+            <div class="panel-header">
+                <h4>Choose Support Type</h4>
+            </div>
+            <div class="support-options">
+                <button id="ai-support-btn" class="support-option-btn">
+                    <span class="option-icon">🤖</span>
+                    <h3>AI Assistant</h3>
+                    <p>Instant answers powered by AI</p>
+                    <span class="badge">Default</span>
+                </button>
+                <button id="admin-support-btn" class="support-option-btn">
+                    <span class="option-icon">👨‍💼</span>
+                    <h3>Human Support</h3>
+                    <p>Talk to our support team</p>
+                    <span class="badge">Manual</span>
+                </button>
+            </div>
+        </div>
+
         <!-- Chat Header -->
         <div class="chat-header">
             <div class="header-info">
@@ -18,6 +39,7 @@
                 </div>
             </div>
             <div class="header-actions">
+                <button id="switch-support-btn" class="header-btn" title="Switch Support Type">🔄</button>
                 <button id="chat-groups-btn" class="header-btn" title="View Groups">📋</button>
                 <button id="chat-new-group-btn" class="header-btn" title="Create Group">➕</button>
                 <button id="chat-minimize-btn" class="minimize-btn" aria-label="Minimize Chat">_</button>
@@ -751,6 +773,204 @@
             height: 60vh;
         }
     }
+
+    /* ===== Support Type Selection Panel ===== */
+    .support-type-panel {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--container-bg, #ffffff);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+    }
+
+    html[data-theme="dark"] .support-type-panel {
+        background: #1e293b;
+    }
+
+    .support-options {
+        flex: 1;
+        padding: 30px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        justify-content: center;
+    }
+
+    .support-option-btn {
+        background: var(--card-bg, #f9fafb);
+        border: 2px solid var(--border-color, #e5e7eb);
+        border-radius: 16px;
+        padding: 24px 20px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-align: center;
+    }
+
+    html[data-theme="dark"] .support-option-btn {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .support-option-btn:hover {
+        transform: scale(1.02);
+        border-color: #667eea;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+    }
+
+    .support-option-btn .option-icon {
+        font-size: 48px;
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    .support-option-btn h3 {
+        margin: 0 0 8px 0;
+        color: var(--text-primary, #333);
+        font-size: 18px;
+    }
+
+    html[data-theme="dark"] .support-option-btn h3 {
+        color: #e2e8f0;
+    }
+
+    .support-option-btn p {
+        margin: 0;
+        color: var(--text-secondary, #666);
+        font-size: 13px;
+    }
+
+    .support-option-btn .badge {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 4px 12px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+
+    /* AI Typing Indicator */
+    .ai-typing-indicator {
+        align-self: flex-start;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: var(--container-bg, #ffffff);
+        border-radius: 15px;
+        border-bottom-left-radius: 2px;
+        border: 1px solid var(--border-color, #e5e7eb);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        max-width: 80px;
+    }
+
+    html[data-theme="dark"] .ai-typing-indicator {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    .ai-typing-indicator .typing-dots {
+        display: flex;
+        gap: 4px;
+    }
+
+    .ai-typing-indicator .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+        animation: typingBounce 1.4s infinite;
+    }
+
+    .ai-typing-indicator .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .ai-typing-indicator .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes typingBounce {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-10px); }
+    }
+
+    /* Message sender badges */
+    .message-sender-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .message-sender-badge.ai-badge {
+        background: rgba(102, 126, 234, 0.15);
+        color: #667eea;
+    }
+
+    html[data-theme="dark"] .message-sender-badge.ai-badge {
+        background: rgba(102, 126, 234, 0.25);
+        color: #818cf8;
+    }
+
+    .message-sender-badge.human-badge {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+    }
+
+    html[data-theme="dark"] .message-sender-badge.human-badge {
+        background: rgba(34, 197, 94, 0.25);
+        color: #4ade80;
+    }
+
+    .message-sender-badge .badge-icon {
+        font-size: 12px;
+    }
+
+    /* AI message special styling */
+    .message.ai-message {
+        align-self: flex-start;
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        border: 1px solid #667eea40;
+        color: var(--text-primary, #333);
+        border-bottom-left-radius: 2px;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    }
+
+    html[data-theme="dark"] .message.ai-message {
+        background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
+        border-color: #667eea50;
+        color: #e2e8f0;
+    }
+
+    /* Admin/Human message special styling */
+    .message.admin-message {
+        align-self: flex-start;
+        background: linear-gradient(135deg, #22c55e15 0%, #16a34a15 100%);
+        border: 1px solid #22c55e40;
+        color: var(--text-primary, #333);
+        border-bottom-left-radius: 2px;
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+    }
+
+    html[data-theme="dark"] .message.admin-message {
+        background: linear-gradient(135deg, #22c55e25 0%, #16a34a25 100%);
+        border-color: #22c55e50;
+        color: #e2e8f0;
+    }
+
 </style>
 
 <script>
@@ -758,7 +978,8 @@
     // State
     let isOpen = false;
     let currentGroupId = null;
-    let currentGroupType = 'support';
+    let currentGroupType = 'support';  // Can be: 'ai_support', 'admin_support', 'group'
+    let supportType = 'ai';  // 'ai' or 'admin' - tracks which support type user chose
     let selectedMembers = [];
     let socket = null;
     let reconnectAttempts = 0;
@@ -780,11 +1001,15 @@
     const typingIndicator = document.getElementById('typing-indicator');
     
     // Panels
+    const supportTypePanel = document.getElementById('support-type-panel');
     const groupsPanel = document.getElementById('groups-panel');
     const createGroupPanel = document.getElementById('create-group-panel');
     const membersPanel = document.getElementById('members-panel');
     
     // Buttons
+    const aiSupportBtn = document.getElementById('ai-support-btn');
+    const adminSupportBtn = document.getElementById('admin-support-btn');
+    const switchSupportBtn = document.getElementById('switch-support-btn');
     const groupsBtn = document.getElementById('chat-groups-btn');
     const newGroupBtn = document.getElementById('chat-new-group-btn');
     const closeGroupsPanel = document.getElementById('close-groups-panel');
@@ -919,7 +1144,15 @@
             chatWindow.style.display = 'flex';
             chatIcon.style.display = 'none';
             closeIcon.style.display = 'block';
-            loadMessages();
+            
+            // Check if user needs to choose support type (first time or no current group)
+            if (!currentGroupId && !localStorage.getItem('preferredSupportType')) {
+                showSupportTypeSelector();
+            } else {
+                // Load based on saved preference or current group
+                supportType = localStorage.getItem('preferredSupportType') || 'ai';
+                loadMessages();
+            }
             setTimeout(() => chatInput.focus(), 100);
         } else {
             chatWindow.style.display = 'none';
@@ -990,12 +1223,26 @@
     
     function createMessageHTML(msg) {
         let className = 'message ';
+        let badgeHtml = '';
+        
         if (msg.message_type === 'system') {
             className += 'system-message';
         } else if (msg.is_own) {
             className += 'user-message';
         } else {
-            className += 'other-message';
+            // Check if it's an AI message or admin message
+            const isAI = msg.sender && (msg.sender.includes('AI') || msg.sender.includes('🤖'));
+            const isAdmin = msg.sender && (msg.sender.includes('Support') || msg.sender.includes('Admin'));
+            
+            if (isAI) {
+                className += 'ai-message';
+                badgeHtml = '<span class="message-sender-badge ai-badge"><span class="badge-icon">🤖</span> AI Assistant</span>';
+            } else if (isAdmin) {
+                className += 'admin-message';
+                badgeHtml = '<span class="message-sender-badge human-badge"><span class="badge-icon">👨‍💼</span> Support Team</span>';
+            } else {
+                className += 'other-message';
+            }
         }
         
         let senderHtml = '';
@@ -1005,6 +1252,7 @@
         
         return `
             <div class="${className}" data-id="${msg.id}">
+                ${badgeHtml}
                 ${senderHtml}
                 <p>${escapeHtml(msg.content)}</p>
                 <span class="time">${msg.created_at}</span>
@@ -1054,10 +1302,13 @@
                 created_at: time
             });
             
-            // Get AI response for support chat
-            console.log('Getting AI response, currentGroupType:', currentGroupType);
-            console.log('Getting AI response, content:', content);
-            getAIResponse(content);
+            // ONLY get AI response if this is an AI support chat
+            if (supportType === 'ai' && currentGroupType === 'support') {
+                console.log('Getting AI response for AI support chat');
+                getAIResponse(content);
+            } else {
+                console.log('Skipping AI response - supportType:', supportType, 'groupType:', currentGroupType);
+            }
         } else {
             // Fallback to HTTP API if WebSocket not available
             sendMessageHTTP(content);
@@ -1075,7 +1326,8 @@
                 },
                 body: JSON.stringify({
                     content: content,
-                    group_id: currentGroupId
+                    group_id: currentGroupId,
+                    support_type: supportType  // Pass support type so backend knows if AI-only
                 })
             });
             
@@ -1085,8 +1337,8 @@
                 currentGroupId = data.group_id;
                 addMessageToUI(data.message);
                 
-                // Get AI response for support chat
-                if (currentGroupType === 'support') {
+                // Get AI response ONLY for AI support chats
+                if (supportType === 'ai' && currentGroupType === 'support') {
                     getAIResponse(content);
                 }
             }
@@ -1098,8 +1350,8 @@
     // Get AI Response for support chat
     async function getAIResponse(userMessage) {
         try {
-            // Show typing indicator
-            showTypingIndicator('AI Assistant', true);
+            // Show AI typing animation
+            showAITyping();
             
             const response = await fetch('/api/ai/chat/', {
                 method: 'POST',
@@ -1114,8 +1366,8 @@
             
             const data = await response.json();
             
-            // Hide typing indicator
-            showTypingIndicator('AI Assistant', false);
+            // Hide AI typing indicator
+            hideAITyping();
             
             if (data.success && data.response) {
                 // Save AI response as a message
@@ -1146,7 +1398,7 @@
             }
         } catch (error) {
             console.error('Error getting AI response:', error);
-            showTypingIndicator('AI Assistant', false);
+            hideAITyping();
         }
     }
     
@@ -1395,6 +1647,35 @@
         groupsPanel.style.display = 'none';
         createGroupPanel.style.display = 'none';
         membersPanel.style.display = 'none';
+        supportTypePanel.style.display = 'none';
+    }
+    
+    
+    // Show Support Type Selector
+    function showSupportTypeSelector() {
+        closeAllPanels();
+        supportTypePanel.style.display = 'flex';
+    }
+    
+    // Select Support Type
+    function selectSupportType(type) {
+        supportType = type;
+        localStorage.setItem('preferredSupportType', type);
+        currentGroupId = null;
+        if (type === 'ai') {
+            updateHeader('AI Assistant', '🤖');
+        } else {
+            updateHeader('Human Support', '👨‍💼');
+        }
+        closeAllPanels();
+        loadMessages();
+    }
+    
+    // Switch Support Type
+    function switchSupportType() {
+        localStorage.removeItem('preferredSupportType');
+        currentGroupId = null;
+        showSupportTypeSelector();
     }
     
     // Escape HTML
@@ -1450,6 +1731,14 @@
         groupsPanel.style.display = 'none';
     });
     
+    
+    
+    // Support Type Selection Listeners
+    aiSupportBtn.addEventListener('click', () => selectSupportType('ai'));
+    adminSupportBtn.addEventListener('click', () => selectSupportType('admin'));
+    switchSupportBtn.addEventListener('click', switchSupportType);
+
+
     closeCreatePanel.addEventListener('click', () => {
         createGroupPanel.style.display = 'none';
     });

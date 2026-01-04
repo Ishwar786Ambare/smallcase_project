@@ -124,6 +124,7 @@ class ChatGroup(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     avatar = models.CharField(max_length=10, default='👥')  # Emoji avatar
+    is_ai_only = models.BooleanField(default=False)  # True for AI-only support chats
     
     def __str__(self):
         return f"{self.name} ({self.get_group_type_display()})"

@@ -726,12 +726,13 @@ import json
 from .models import ChatGroup, ChatGroupMember, ChatMessage
 
 
-def get_or_create_support_chat(user):
+def get_or_create_support_chat(user, is_ai_only=False):
     """Get or create a support chat for the user"""
-    # Check if user already has a support chat
+    # Check if user already has a support chat of this type
     membership = ChatGroupMember.objects.filter(
         user=user,
         group__group_type='support',
+        group__is_ai_only=is_ai_only,  # Match same support type
         is_active=True
     ).select_related('group').first()
     
@@ -739,11 +740,15 @@ def get_or_create_support_chat(user):
         return membership.group
     
     # Create a new support chat for this user
+    avatar_emoji = '🤖' if is_ai_only else '👨‍💼'
+    chat_type = 'AI Support' if is_ai_only else 'Human Support'
+    
     group = ChatGroup.objects.create(
-        name=f"Support Chat - {user.email}",
+        name=f"{chat_type} - {user.email}",
         group_type='support',
         created_by=user,
-        avatar='👨‍💻'
+        avatar=avatar_emoji,
+        is_ai_only=is_ai_only  # Mark as AI-only if requested
     )
     
     # Add user as member
@@ -780,11 +785,19 @@ def chat_send_message(request):
         # Get or create support chat if no group specified
         if group_id:
             group = get_object_or_404(ChatGroup, id=group_id, is_active=True)
+            
+            # Prevent admins from sending to AI-only chats
+            if group.is_ai_only and (request.user.is_staff or request.user.is_superuser):
+                return JsonResponse({'success': False, 'error': 'Cannot send messages to AI-only support chats'})
+            
             # Verify user is member of this group
             if not ChatGroupMember.objects.filter(group=group, user=request.user, is_active=True).exists():
                 return JsonResponse({'success': False, 'error': 'Not a member of this group'})
         else:
-            group = get_or_create_support_chat(request.user)
+            # Get support_type from request (from frontend)
+            support_type = data.get('support_type', 'ai')
+            is_ai_only = (support_type == 'ai')
+            group = get_or_create_support_chat(request.user, is_ai_only=is_ai_only)
         
         # Create message
         message = ChatMessage.objects.create(
@@ -832,8 +845,12 @@ def chat_get_messages(request):
             ).exists()
             
             if not is_member:
-                # Allow admin/staff to join support chats automatically
+                # Allow admin/staff to join support chats automatically (but NOT AI-only chats)
                 if (request.user.is_staff or request.user.is_superuser) and group.group_type == 'support':
+                    # Check if this is an AI-only chat
+                    if group.is_ai_only:
+                        return JsonResponse({'success': False, 'error': 'This is an AI-only support chat'})
+                    
                     # Auto-add admin as support member
                     ChatGroupMember.objects.create(
                         group=group,
@@ -849,7 +866,10 @@ def chat_get_messages(request):
                 else:
                     return JsonResponse({'success': False, 'error': 'Not a member of this group'})
         else:
-            group = get_or_create_support_chat(request.user)
+            # For initial load, check localStorage preference (defaults to AI)
+            # Since we can't access it server-side, default to admin support
+            # The frontend will handle switching if needed
+            group = get_or_create_support_chat(request.user, is_ai_only=False)
         
         # Get messages
         messages_qs = ChatMessage.objects.filter(
@@ -926,11 +946,12 @@ def chat_get_groups(request):
                 'is_member': True
             })
         
-        # For admin/staff users: also show ALL support chats they can respond to
+        # For admin/staff users: also show ALL support chats they can respond to (excluding AI-only)
         if request.user.is_staff or request.user.is_superuser:
             support_chats = ChatGroup.objects.filter(
                 group_type='support',
-                is_active=True
+                is_active=True,
+                is_ai_only=False  # Exclude AI-only chats from admin view
             ).exclude(id__in=already_added_ids).order_by('-updated_at')
             
             for group in support_chats:
