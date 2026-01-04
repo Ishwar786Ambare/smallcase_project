@@ -22,6 +22,8 @@ urlpatterns = [
     
     # Static pages
     path('contact/', views.contact_us, name='contact_us'),
+    path('i18n-demo/', views.i18n_demo, name='i18n_demo'),  # Multi-language demo
+
     
     # Chat API endpoints
     path('api/chat/send/', views.chat_send_message, name='chat_send_message'),

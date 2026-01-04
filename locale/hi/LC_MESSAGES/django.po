@@ -1,0 +1,224 @@
+# HINDI TRANSLATION FILE
+# Copyright (C) 2026
+# This file is distributed under the same license as the StockBasket project.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: StockBasket 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-05 01:14+0530\n"
+"PO-Revision-Date: 2026-01-05 01:14+0530\n"
+"Last-Translator: StockBasket Team\n"
+"Language-Team: Hindi\n"
+"Language: hi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Dashboard"
+msgstr "डैशबोर्ड"
+
+msgid "Create Basket"
+msgstr "बास्केट बनाएं"
+
+msgid "Load Stocks"
+msgstr "स्टॉक लोड करें"
+
+msgid "Update Prices"
+msgstr "कीमतें अपडेट करें"
+
+msgid "Logout"
+msgstr "लॉग आउट"
+
+msgid "Login"
+msgstr "लॉग इन"
+
+msgid "Sign Up"
+msgstr "साइन अप"
+
+msgid "Change language"
+msgstr "भाषा बदलें"
+
+msgid "Portfolio Manager"
+msgstr "पोर्टफोलियो प्रबंधक"
+
+msgid "Baskets"
+msgstr "बास्केट"
+
+msgid "Stocks"
+msgstr "स्टॉक"
+
+msgid "Total Value"
+msgstr "कुल मूल्य"
+
+msgid "Profit/Loss"
+msgstr "लाभ/हानि"
+
+msgid "Quantity"
+msgstr "मात्रा"
+
+msgid "Price"
+msgstr "कीमत"
+
+msgid "Current Price"
+msgstr "वर्तमान कीमत"
+
+msgid "Buy Price"
+msgstr "खरीद मूल्य"
+
+msgid "Name"
+msgstr "नाम"
+
+msgid "Symbol"
+msgstr "प्रतीक"
+
+msgid "Actions"
+msgstr "क्रियाएँ"
+
+msgid "Edit"
+msgstr "संपादित करें"
+
+msgid "Delete"
+msgstr "हटाएं"
+
+msgid "View"
+msgstr "देखें"
+
+msgid "Save"
+msgstr "सहेजें"
+
+msgid "Cancel"
+msgstr "रद्द करें"
+
+msgid "Submit"
+msgstr "जमा करें"
+
+msgid "Search"
+msgstr "खोजें"
+
+msgid "Filter"
+msgstr "फ़िल्टर"
+
+msgid "Sort"
+msgstr "क्रमबद्ध करें"
+
+msgid "Date"
+msgstr "तारीख"
+
+msgid "Description"
+msgstr "विवरण"
+
+msgid "Total"
+msgstr "कुल"
+
+msgid "Home"
+msgstr "होम"
+
+msgid "Settings"
+msgstr "सेटिंग्स"
+
+msgid "Profile"
+msgstr "प्रोफ़ाइल"
+
+msgid "Help"
+msgstr "सहायता"
+
+msgid "Contact"
+msgstr "संपर्क करें"
+
+msgid "About"
+msgstr "के बारे में"
+
+msgid "Welcome"
+msgstr "स्वागत है"
+
+msgid "Loading..."
+msgstr "लोड हो रहा है..."
+
+msgid "Error"
+msgstr "त्रुटि"
+
+msgid "Success"
+msgstr "सफलता"
+
+msgid "Warning"
+msgstr "चेतावनी"
+
+msgid "Info"
+msgstr "जानकारी"
+
+msgid "Close"
+msgstr "बंद करें"
+
+msgid "Back"
+msgstr "वापस"
+
+msgid "Next"
+msgstr "आगे"
+
+msgid "Previous"
+msgstr "पिछला"
+
+msgid "Confirm"
+msgstr "पुष्टि करें"
+
+msgid "Yes"
+msgstr "हाँ"
+
+msgid "No"
+msgstr "नहीं"
+
+msgid "Multi-Language Demo"
+msgstr "बहु-भाषा डेमो"
+
+msgid "Multi-Language Support Demo"
+msgstr "बहु-भाषा समर्थन डेमो"
+
+msgid "This page demonstrates the i18n implementation"
+msgstr "यह पृष्ठ i18n कार्यान्वयन को प्रदर्शित करता है"
+
+msgid "Current Language"
+msgstr "वर्तमान भाषा"
+
+msgid "Navigation"
+msgstr "नेविगेशन"
+
+msgid "Common Fields"
+msgstr "सामान्य फ़ील्ड"
+
+msgid "Messages"
+msgstr "संदेश"
+
+msgid "How to Use"
+msgstr "उपयोग कैसे करें"
+
+msgid "Click the language switcher in the top-right corner"
+msgstr "ऊपरी-दाएं कोने में भाषा स्विचर पर क्लिक करें"
+
+msgid "Select your preferred language (English, Hindi, or Marathi)"
+msgstr "अपनी पसंदीदा भाषा चुनें (अंग्रेज़ी, हिंदी, या मराठी)"
+
+msgid "The page will reload with all text translated"
+msgstr "पृष्ठ सभी पाठ के अनुवाद के साथ फिर से लोड होगा"
+
+msgid "Your language preference is saved automatically"
+msgstr "आपकी भाषा वरीयता स्वचालित रूप से सहेजी जाती है"
+
+msgid "Operation completed successfully"
+msgstr "ऑपरेशन सफलतापूर्वक पूर्ण हुआ"
+
+msgid "Something went wrong"
+msgstr "कुछ गड़बड़ी हो गई"
+
+msgid "Please check your input"
+msgstr "कृपया अपना इनपुट जांचें"
+
+msgid "Enter name"
+msgstr "नाम दर्ज करें"
+
+msgid "Enter symbol"
+msgstr "प्रतीक दर्ज करें"
+
+msgid "Enter description"
+msgstr "विवरण दर्ज करें"
+

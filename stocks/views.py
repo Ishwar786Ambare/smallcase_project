@@ -715,6 +715,11 @@ def contact_us(request):
     return render(request, 'stocks/contact.j2', context)
 
 
+def i18n_demo(request):
+    """Multi-language demo page"""
+    return render(request, 'stocks/i18n_demo.j2')
+
+
 # ==========================================
 # Chat API Views
 # ==========================================

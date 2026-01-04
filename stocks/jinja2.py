@@ -28,11 +28,19 @@ def round_filter(value, precision=2):
 from django.contrib.messages import get_messages
 
 def environment(**options):
-    env = Environment(**options)
+    env = Environment(extensions=['jinja2.ext.i18n'], **options)
+    
+    # Install Django's translation functions
+    from django.utils import translation
+    from django.conf import settings
+    env.install_gettext_translations(translation)
+    
     env.globals.update({
         'static': static,   
         'url': reverse,
         'get_messages': get_messages,
+        'get_language': translation.get_language,
+        'LANGUAGES': settings.LANGUAGES,  # Available languages
     })
     env.filters['count'] = count_queryset
     env.filters['date'] = date

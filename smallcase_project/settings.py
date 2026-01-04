@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Serve static files in production
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',  # Language detection middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -157,13 +158,27 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'  # Default language
+
+# Supported languages
+LANGUAGES = [
+    ('en', 'English'),
+    ('hi', 'हिन्दी (Hindi)'),
+    ('mr', 'मराठी (Marathi)'),
+]
 
 TIME_ZONE = 'Asia/Kolkata'
 
-USE_I18N = True
+USE_I18N = True  # Enable internationalization
+
+USE_L10N = True  # Enable localization
 
 USE_TZ = True
+
+# Path where translation files (.po and .mo) will be stored
+LOCALE_PATHS = [
+    BASE_DIR / 'locale',
+]
 
 
 # Static files (CSS, JavaScript, Images)

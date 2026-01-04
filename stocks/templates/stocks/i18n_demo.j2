@@ -1,0 +1,209 @@
+{% extends "stocks/base.j2" %}
+
+{% block title %}{{ _('Multi-Language Demo') }} - StockBasket{% endblock %}
+
+{% block content %}
+<div class="container" style="padding: 40px 20px; max-width: 1200px; margin: 0 auto;">
+    <div class="demo-header" style="text-align: center; margin-bottom: 40px;">
+        <h1 style="font-size: 2.5rem; color: var(--text-primary); margin-bottom: 10px;">
+            {{ _('Multi-Language Support Demo') }}
+        </h1>
+        <p style="font-size: 1.2rem; color: var(--text-secondary);">
+            {{ _('This page demonstrates the i18n implementation') }}
+        </p>
+        <p style="color: var(--text-secondary); margin-top: 20px;">
+            {{ _('Current Language') }}: <strong>{{ get_language()|upper }}</strong>
+        </p>
+    </div>
+
+    <div class="demo-content" style="display: grid; gap: 30px;">
+        <!-- Navigation Strings -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                📱 {{ _('Navigation') }}
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="demo-item">{{ _('Dashboard') }}</div>
+                <div class="demo-item">{{ _('Create Basket') }}</div>
+                <div class="demo-item">{{ _('Load Stocks') }}</div>
+                <div class="demo-item">{{ _('Update Prices') }}</div>
+                <div class="demo-item">{{ _('Login') }}</div>
+                <div class="demo-item">{{ _('Logout') }}</div>
+                <div class="demo-item">{{ _('Sign Up') }}</div>
+                <div class="demo-item">{{ _('Home') }}</div>
+            </div>
+        </div>
+
+        <!-- Portfolio Strings -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                💼 {{ _('Portfolio Manager') }}
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div class="demo-item">{{ _('Baskets') }}</div>
+                <div class="demo-item">{{ _('Stocks') }}</div>
+                <div class="demo-item">{{ _('Total Value') }}</div>
+                <div class="demo-item">{{ _('Profit/Loss') }}</div>
+                <div class="demo-item">{{ _('Quantity') }}</div>
+                <div class="demo-item">{{ _('Price') }}</div>
+                <div class="demo-item">{{ _('Current Price') }}</div>
+                <div class="demo-item">{{ _('Buy Price') }}</div>
+            </div>
+        </div>
+
+        <!-- Action Strings -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                ⚡ {{ _('Actions') }}
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <button class="demo-button">{{ _('Save') }}</button>
+                <button class="demo-button">{{ _('Cancel') }}</button>
+                <button class="demo-button">{{ _('Submit') }}</button>
+                <button class="demo-button">{{ _('Edit') }}</button>
+                <button class="demo-button">{{ _('Delete') }}</button>
+                <button class="demo-button">{{ _('View') }}</button>
+                <button class="demo-button">{{ _('Search') }}</button>
+                <button class="demo-button">{{ _('Filter') }}</button>
+            </div>
+        </div>
+
+        <!-- Common Fields -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                📝 {{ _('Common Fields') }}
+            </h2>
+            <div style="display: grid; gap: 15px;">
+                <div class="demo-field">
+                    <label>{{ _('Name') }}:</label>
+                    <input type="text" placeholder="{{ _('Enter name') }}" disabled>
+                </div>
+                <div class="demo-field">
+                    <label>{{ _('Symbol') }}:</label>
+                    <input type="text" placeholder="{{ _('Enter symbol') }}" disabled>
+                </div>
+                <div class="demo-field">
+                    <label>{{ _('Date') }}:</label>
+                    <input type="date" disabled>
+                </div>
+                <div class="demo-field">
+                    <label>{{ _('Description') }}:</label>
+                    <textarea placeholder="{{ _('Enter description') }}" disabled rows="3"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                💬 {{ _('Messages') }}
+            </h2>
+            <div style="display: grid; gap: 15px;">
+                <div class="message success">✅ {{ _('Success') }}: {{ _('Operation completed successfully') }}</div>
+                <div class="message error">❌ {{ _('Error') }}: {{ _('Something went wrong') }}</div>
+                <div class="message warning">⚠️ {{ _('Warning') }}: {{ _('Please check your input') }}</div>
+                <div class="message info">ℹ️ {{ _('Info') }}: {{ _('Loading...') }}</div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="demo-section" style="background: var(--bg-secondary); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-color);">
+            <h2 style="color: var(--text-primary); margin-bottom: 20px;">
+                🚀 {{ _('How to Use') }}
+            </h2>
+            <ol style="color: var(--text-secondary); line-height: 1.8; padding-left: 20px;">
+                <li>{{ _('Click the language switcher in the top-right corner') }}</li>
+                <li>{{ _('Select your preferred language (English, Hindi, or Marathi)') }}</li>
+                <li>{{ _('The page will reload with all text translated') }}</li>
+                <li>{{ _('Your language preference is saved automatically') }}</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.demo-item {
+    background: var(--bg-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-weight: 500;
+}
+
+.demo-button {
+    padding: 10px 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.demo-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.demo-field {
+    display: grid;
+    gap: 8px;
+}
+
+.demo-field label {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.demo-field input,
+.demo-field textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: inherit;
+}
+
+.message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid;
+}
+
+.message.success {
+    background: rgba(34, 197, 94, 0.1);
+    border-left-color: #22c55e;
+    color: var(--text-primary);
+}
+
+.message.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #ef4444;
+    color: var(--text-primary);
+}
+
+.message.warning {
+    background: rgba(251, 191, 36, 0.1);
+    border-left-color: #fbbf24;
+    color: var(--text-primary);
+}
+
+.message.info {
+    background: rgba(37, 99, 235, 0.1);
+    border-left-color: #2563eb;
+    color: var(--text-primary);
+}
+</style>
+{% endblock %}

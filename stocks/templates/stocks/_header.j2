@@ -9,10 +9,10 @@
         {% if request.user.is_authenticated %}
         <nav>
             <ul class="nav-menu">
-                <li><a href="{{ url('home') }}">🏠 Dashboard</a></li>
-                <li><a href="{{ url('basket_create') }}">➕ Create Basket</a></li>
-                <li><a href="{{ url('populate_stocks') }}">📥 Load Stocks</a></li>
-                <li><a href="{{ url('update_prices') }}">🔄 Update Prices</a></li>
+                <li><a href="{{ url('home') }}">🏠 {{ _('Dashboard') }}</a></li>
+                <li><a href="{{ url('basket_create') }}">➕ {{ _('Create Basket') }}</a></li>
+                <li><a href="{{ url('populate_stocks') }}">📥 {{ _('Load Stocks') }}</a></li>
+                <li><a href="{{ url('update_prices') }}">🔄 {{ _('Update Prices') }}</a></li>
             </ul>
         </nav>
 
@@ -22,13 +22,13 @@
                 <div class="user-email">{{ request.user.email }}</div>
             </div>
             {% include 'stocks/_theme_toggle.j2' %}
-            <a href="{{ url('user:logout') }}" class="btn-logout">Logout</a>
+            <a href="{{ url('user:logout') }}" class="btn-logout">{{ _('Logout') }}</a>
         </div>
         {% else %}
         <div style="display: flex; gap: 15px; align-items: center;">
             {% include 'stocks/_theme_toggle.j2' %}
-            <a href="{{ url('user:login') }}" class="btn-auth">Login</a>
-            <a href="{{ url('user:signup') }}" class="btn-auth">Sign Up</a>
+            <a href="{{ url('user:login') }}" class="btn-auth">{{ _('Login') }}</a>
+            <a href="{{ url('user:signup') }}" class="btn-auth">{{ _('Sign Up') }}</a>
         </div>
         {% endif %}
     </div>
