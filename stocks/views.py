@@ -853,24 +853,21 @@ def chat_get_messages(request):
             ).exists()
             
             if not is_member:
-                # Allow admin/staff to join support chats automatically (but NOT AI-only chats)
+                # Allow admin/staff to join support chats automatically (including AI-only chats for VIEWING)
                 if (request.user.is_staff or request.user.is_superuser) and group.group_type == 'support':
-                    # Check if this is an AI-only chat
-                    if group.is_ai_only:
-                        return JsonResponse({'success': False, 'error': 'This is an AI-only support chat'})
-                    
-                    # Auto-add admin as support member
+                    # Auto-add admin as support member (even for AI-only chats - they can view but not send)
                     ChatGroupMember.objects.create(
                         group=group,
                         user=request.user,
                         role='admin'
                     )
-                    # Add system message about support joining
-                    ChatMessage.objects.create(
-                        group=group,
-                        content=f"Support team member joined the chat",
-                        message_type='system'
-                    )
+                    # Add system message about support joining (only for non-AI-only chats)
+                    if not group.is_ai_only:
+                        ChatMessage.objects.create(
+                            group=group,
+                            content=f"Support team member joined the chat",
+                            message_type='system'
+                        )
                 else:
                     return JsonResponse({'success': False, 'error': 'Not a member of this group'})
         else:
@@ -954,12 +951,12 @@ def chat_get_groups(request):
                 'is_member': True
             })
         
-        # For admin/staff users: also show ALL support chats they can respond to (excluding AI-only)
+        # For admin/staff users: also show ALL support chats they can respond to (including AI-only for viewing)
         if request.user.is_staff or request.user.is_superuser:
             support_chats = ChatGroup.objects.filter(
                 group_type='support',
-                is_active=True,
-                is_ai_only=False  # Exclude AI-only chats from admin view
+                is_active=True
+                # Note: Removed is_ai_only=False filter so admins can see ALL support chats
             ).exclude(id__in=already_added_ids).order_by('-updated_at')
             
             for group in support_chats:

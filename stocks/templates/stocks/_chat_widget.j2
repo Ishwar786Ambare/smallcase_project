@@ -8,26 +8,7 @@
 
     <!-- Chat Window -->
     <div id="chat-window" class="chat-window" style="display: none;">
-        <!-- Support Type Selection (shown first time) -->
-        <div id="support-type-panel" class="support-type-panel" style="display: none;">
-            <div class="panel-header">
-                <h4>Choose Support Type</h4>
-            </div>
-            <div class="support-options">
-                <button id="ai-support-btn" class="support-option-btn">
-                    <span class="option-icon">🤖</span>
-                    <h3>AI Assistant</h3>
-                    <p>Instant answers powered by AI</p>
-                    <span class="badge">Default</span>
-                </button>
-                <button id="admin-support-btn" class="support-option-btn">
-                    <span class="option-icon">👨‍💼</span>
-                    <h3>Human Support</h3>
-                    <p>Talk to our support team</p>
-                    <span class="badge">Manual</span>
-                </button>
-            </div>
-        </div>
+
 
         <!-- Chat Header -->
         <div class="chat-header">
@@ -39,7 +20,14 @@
                 </div>
             </div>
             <div class="header-actions">
-                <button id="switch-support-btn" class="header-btn" title="Switch Support Type">🔄</button>
+                <div class="toggle-container">
+                    <button id="ai-toggle-btn" class="toggle-btn" title="">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-icon ai-icon">🤖</span>
+                        <span class="toggle-icon human-icon">👨‍💼</span>
+                    </button>
+                    <div class="toggle-tooltip" id="toggle-tooltip">Toggle AI/Human Support</div>
+                </div>
                 <button id="chat-groups-btn" class="header-btn" title="View Groups">📋</button>
                 <button id="chat-new-group-btn" class="header-btn" title="Create Group">➕</button>
                 <button id="chat-minimize-btn" class="minimize-btn" aria-label="Minimize Chat">_</button>
@@ -774,86 +762,103 @@
         }
     }
 
-    /* ===== Support Type Selection Panel ===== */
-    .support-type-panel {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--container-bg, #ffffff);
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-    }
-
-    html[data-theme="dark"] .support-type-panel {
-        background: #1e293b;
-    }
-
-    .support-options {
-        flex: 1;
-        padding: 30px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        justify-content: center;
-    }
-
-    .support-option-btn {
-        background: var(--card-bg, #f9fafb);
-        border: 2px solid var(--border-color, #e5e7eb);
-        border-radius: 16px;
-        padding: 24px 20px;
-        cursor: pointer;
-        transition: all 0.3s;
-        text-align: center;
-    }
-
-    html[data-theme="dark"] .support-option-btn {
-        background: #0f172a;
-        border-color: #334155;
-    }
-
-    .support-option-btn:hover {
-        transform: scale(1.02);
-        border-color: #667eea;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
-    }
-
-    .support-option-btn .option-icon {
-        font-size: 48px;
-        display: block;
-        margin-bottom: 12px;
-    }
-
-    .support-option-btn h3 {
-        margin: 0 0 8px 0;
-        color: var(--text-primary, #333);
-        font-size: 18px;
-    }
-
-    html[data-theme="dark"] .support-option-btn h3 {
-        color: #e2e8f0;
-    }
-
-    .support-option-btn p {
-        margin: 0;
-        color: var(--text-secondary, #666);
-        font-size: 13px;
-    }
-
-    .support-option-btn .badge {
+    /* ===== AI Toggle Switch ===== */
+    .toggle-container {
+        position: relative;
         display: inline-block;
-        margin-top: 12px;
-        padding: 4px 12px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 12px;
-        font-size: 11px;
-        font-weight: 600;
     }
 
+    .toggle-btn {
+        position: relative;
+        width: 60px;
+        height: 28px;
+        background: rgba(255,255,255,0.3);
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: background 0.3s;
+        overflow: hidden;
+    }
+
+    .toggle-btn:hover {
+        background: rgba(255,255,255,0.4);
+    }
+
+    .toggle-slider {
+        position: absolute;
+        left: 2px;
+        top: 2px;
+        width: 24px;
+        height: 24px;
+        background: white;
+        border-radius: 50%;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .toggle-btn.active .toggle-slider {
+        transform: translateX(32px);
+    }
+
+    .toggle-icon {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        transition: opacity 0.2s;
+    }
+
+    .toggle-icon.ai-icon {
+        left: 6px;
+        opacity: 1;
+    }
+
+    .toggle-icon.human-icon {
+        right: 6px;
+        opacity: 0.5;
+    }
+
+    .toggle-btn.active .toggle-icon.ai-icon {
+        opacity: 0.5;
+    }
+
+    .toggle-btn.active .toggle-icon.human-icon {
+        opacity: 1;
+    }
+
+    .toggle-tooltip {
+        position: absolute;
+        bottom: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s;
+        z-index: 1000;
+    }
+
+    .toggle-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-bottom: 4px solid rgba(0, 0, 0, 0.8);
+    }
+
+    .toggle-container:hover .toggle-tooltip {
+        opacity: 1;
+    }
 
     /* AI Typing Indicator */
     .ai-typing-indicator {
@@ -1001,15 +1006,12 @@
     const typingIndicator = document.getElementById('typing-indicator');
     
     // Panels
-    const supportTypePanel = document.getElementById('support-type-panel');
     const groupsPanel = document.getElementById('groups-panel');
     const createGroupPanel = document.getElementById('create-group-panel');
     const membersPanel = document.getElementById('members-panel');
     
     // Buttons
-    const aiSupportBtn = document.getElementById('ai-support-btn');
-    const adminSupportBtn = document.getElementById('admin-support-btn');
-    const switchSupportBtn = document.getElementById('switch-support-btn');
+    const aiToggleBtn = document.getElementById('ai-toggle-btn');
     const groupsBtn = document.getElementById('chat-groups-btn');
     const newGroupBtn = document.getElementById('chat-new-group-btn');
     const closeGroupsPanel = document.getElementById('close-groups-panel');
@@ -1156,14 +1158,18 @@
             chatIcon.style.display = 'none';
             closeIcon.style.display = 'block';
             
-            // Check if user needs to choose support type (first time or no current group)
-            if (!currentGroupId && !localStorage.getItem('preferredSupportType')) {
-                showSupportTypeSelector();
+            // Load support chat based on current supportType (default to AI)
+            if (!localStorage.getItem('preferredSupportType')) {
+                supportType = 'ai';
+                localStorage.setItem('preferredSupportType', 'ai');
             } else {
-                // Load based on saved preference or current group
-                supportType = localStorage.getItem('preferredSupportType') || 'ai';
-                loadMessages();
+                supportType = localStorage.getItem('preferredSupportType');
             }
+            
+            // Update toggle button state
+            updateToggleButton();
+            
+            loadMessages();
             setTimeout(() => chatInput.focus(), 100);
         } else {
             chatWindow.style.display = 'none';
@@ -1663,37 +1669,37 @@
         groupsPanel.style.display = 'none';
         createGroupPanel.style.display = 'none';
         membersPanel.style.display = 'none';
-        supportTypePanel.style.display = 'none';
     }
     
-    
-    // Show Support Type Selector
-    function showSupportTypeSelector() {
-        closeAllPanels();
-        supportTypePanel.style.display = 'flex';
+    // Update Toggle Button State
+    function updateToggleButton() {
+        if (supportType === 'admin') {
+            aiToggleBtn.classList.add('active');
+        } else {
+            aiToggleBtn.classList.remove('active');
+        }
     }
     
-    // Select Support Type
-    function selectSupportType(type) {
-        console.log('🎯 selectSupportType called with type:', type);
-        supportType = type;
-        localStorage.setItem('preferredSupportType', type);
-        console.log('✅ supportType set to:', supportType, '| localStorage:', localStorage.getItem('preferredSupportType'));
+    // Toggle Support Type
+    function toggleSupportType() {
+        console.log('🔄 Toggling support type from:', supportType);
+        // Toggle between ai and admin
+        supportType = supportType === 'ai' ? 'admin' : 'ai';
+        console.log('✅ New support type:', supportType);
+        
+        localStorage.setItem('preferredSupportType', supportType);
         currentGroupId = null;
-        if (type === 'ai') {
+        
+        // Update UI
+        if (supportType === 'ai') {
             updateHeader('AI Assistant', '🤖');
         } else {
             updateHeader('Human Support', '👨‍💼');
         }
+        
+        updateToggleButton();
         closeAllPanels();
         loadMessages();
-    }
-    
-    // Switch Support Type
-    function switchSupportType() {
-        localStorage.removeItem('preferredSupportType');
-        currentGroupId = null;
-        showSupportTypeSelector();
     }
     
     // Escape HTML
@@ -1750,11 +1756,8 @@
     });
     
     
-    
-    // Support Type Selection Listeners
-    aiSupportBtn.addEventListener('click', () => selectSupportType('ai'));
-    adminSupportBtn.addEventListener('click', () => selectSupportType('admin'));
-    switchSupportBtn.addEventListener('click', switchSupportType);
+    // Toggle Support Type Event Listener
+    aiToggleBtn.addEventListener('click', toggleSupportType);
 
 
     closeCreatePanel.addEventListener('click', () => {
