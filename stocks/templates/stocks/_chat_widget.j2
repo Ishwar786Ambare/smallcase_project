@@ -1137,6 +1137,17 @@
         }
     }
     
+    // Show AI typing indicator
+    function showAITyping() {
+        document.getElementById('typing-user').textContent = 'AI Assistant';
+        typingIndicator.style.display = 'block';
+    }
+    
+    // Hide AI typing indicator
+    function hideAITyping() {
+        typingIndicator.style.display = 'none';
+    }
+    
     // Toggle Chat
     function toggleChat() {
         isOpen = !isOpen;
@@ -1303,11 +1314,14 @@
             });
             
             // ONLY get AI response if this is an AI support chat
+            console.log('🔍 AI Check - supportType:', supportType, 'currentGroupType:', currentGroupType);
             if (supportType === 'ai' && currentGroupType === 'support') {
-                console.log('Getting AI response for AI support chat');
+                console.log('✅ Calling AI - conditions met!');
                 getAIResponse(content);
             } else {
-                console.log('Skipping AI response - supportType:', supportType, 'groupType:', currentGroupType);
+                console.log('❌ Skipping AI - supportType:', supportType, 'groupType:', currentGroupType);
+                if (supportType !== 'ai') console.log('   Reason: supportType is not "ai"');
+                if (currentGroupType !== 'support') console.log('   Reason: currentGroupType is not "support"');
             }
         } else {
             // Fallback to HTTP API if WebSocket not available
@@ -1659,8 +1673,10 @@
     
     // Select Support Type
     function selectSupportType(type) {
+        console.log('🎯 selectSupportType called with type:', type);
         supportType = type;
         localStorage.setItem('preferredSupportType', type);
+        console.log('✅ supportType set to:', supportType, '| localStorage:', localStorage.getItem('preferredSupportType'));
         currentGroupId = null;
         if (type === 'ai') {
             updateHeader('AI Assistant', '🤖');
