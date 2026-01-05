@@ -220,3 +220,52 @@ class ChatMessage(models.Model):
             models.Index(fields=['group', '-created_at']),
             models.Index(fields=['sender']),
         ]
+
+
+# ==========================================
+# URL Shortening for Basket Sharing
+# ==========================================
+
+class TinyURL(models.Model):
+    """Model to store shortened URLs for basket sharing"""
+    short_code = models.CharField(max_length=10, unique=True, db_index=True)
+    original_url = models.URLField(max_length=500)
+    basket = models.ForeignKey(
+        Basket, 
+        on_delete=models.CASCADE, 
+        related_name='tiny_urls',
+        null=True,
+        blank=True
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_tiny_urls'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    click_count = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.short_code} -> {self.original_url[:50]}"
+    
+    def is_expired(self):
+        """Check if the URL has expired"""
+        if self.expires_at:
+            return timezone.now() > self.expires_at
+        return False
+    
+    def increment_clicks(self):
+        """Increment the click counter"""
+        self.click_count += 1
+        self.save(update_fields=['click_count'])
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['short_code']),
+            models.Index(fields=['-created_at']),
+        ]

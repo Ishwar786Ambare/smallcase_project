@@ -37,6 +37,11 @@ urlpatterns = [
     
     # AI Chat API
     path('api/ai/chat/', views.ai_chat, name='ai_chat'),
+    
+    # Tiny URL for basket sharing
+    path('basket/<int:basket_id>/share/', views.create_tiny_url, name='create_tiny_url'),
+    path('s/<str:short_code>/', views.redirect_tiny_url, name='redirect_tiny_url'),
+    path('s/<str:short_code>/stats/', views.tiny_url_stats, name='tiny_url_stats'),
 ]
 
 
