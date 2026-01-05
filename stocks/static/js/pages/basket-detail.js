@@ -170,7 +170,216 @@ document.addEventListener('keydown', function (e) {
 });
 
 // Load and render performance comparison chart
+// Load and render performance comparison chart
 let chartInstance = null;  // Store chart instance for updates
+let cachedChartData = null; // Store data to re-render on theme change
+
+function getThemeConfig() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    return {
+        textColor: isDark ? '#cbd5e1' : '#334155', // Slate 300 : Slate 700
+        gridColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+        titleColor: isDark ? '#f8fafc' : '#0f172a',
+        tooltipBg: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(0, 0, 0, 0.8)',
+        tooltipBorder: isDark ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+    };
+}
+
+function renderChart(data) {
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    const theme = getThemeConfig();
+
+    // Destroy existing chart if it exists
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    // Create gradients for better visual effect
+    const gradientBasket = ctx.createLinearGradient(0, 0, 0, 400);
+    // Adjust gradient alpha based on theme if needed, but standard usually works
+    gradientBasket.addColorStop(0, 'rgba(37, 99, 235, 0.3)'); // Primary blue
+    gradientBasket.addColorStop(1, 'rgba(37, 99, 235, 0.01)');
+
+    const gradientNifty = ctx.createLinearGradient(0, 0, 0, 400);
+    gradientNifty.addColorStop(0, 'rgba(239, 68, 68, 0.3)'); // Red
+    gradientNifty.addColorStop(1, 'rgba(239, 68, 68, 0.01)');
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: data.datasets.basket.label,
+                    data: data.datasets.basket.data,
+                    borderColor: '#2563eb', // Primary blue
+                    backgroundColor: gradientBasket,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#2563eb',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                },
+                {
+                    label: data.datasets.nifty.label,
+                    data: data.datasets.nifty.data,
+                    borderColor: '#ef4444', // Red
+                    backgroundColor: gradientNifty,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#ef4444',
+                    pointHoverBorderColor: '#fff',
+                    pointHoverBorderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    align: 'end',
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 20,
+                        color: theme.textColor,
+                        font: {
+                            size: 13,
+                            family: "'Inter', sans-serif"
+                        }
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: theme.tooltipBg,
+                    titleColor: '#fff',
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold',
+                        family: "'Inter', sans-serif"
+                    },
+                    bodyColor: '#cbd5e1',
+                    bodyFont: {
+                        size: 13,
+                        family: "'Inter', sans-serif"
+                    },
+                    padding: 12,
+                    displayColors: true,
+                    borderColor: theme.tooltipBorder,
+                    borderWidth: 1,
+                    callbacks: {
+                        title: function (tooltipItems) {
+                            return 'Date: ' + tooltipItems[0].label;
+                        },
+                        label: function (context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            const value = context.parsed.y;
+                            label += '₹' + value.toFixed(2);
+                            return label;
+                        },
+                        footer: function (tooltipItems) {
+                            // Show gain/loss from ₹100
+                            const basketValue = tooltipItems[0].parsed.y;
+                            const niftyValue = tooltipItems[1] ? tooltipItems[1].parsed.y : 100;
+                            const basketChange = basketValue - 100;
+                            const niftyChange = niftyValue - 100;
+
+                            return [
+                                '',
+                                tooltipItems[0].dataset.label + ' Return: ' + (basketChange >= 0 ? '+' : '') + basketChange.toFixed(2) + '%',
+                                tooltipItems[1] ? (tooltipItems[1].dataset.label + ' Return: ' + (niftyChange >= 0 ? '+' : '') + niftyChange.toFixed(2) + '%') : ''
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: theme.gridColor,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        callback: function (value) {
+                            return '₹' + value.toFixed(0);
+                        },
+                        font: {
+                            size: 11,
+                            family: "'Inter', sans-serif"
+                        },
+                        color: theme.textColor
+                    },
+                    title: {
+                        display: true,
+                        text: 'Value of ₹100 Invested',
+                        font: {
+                            size: 12,
+                            weight: '600',
+                            family: "'Inter', sans-serif"
+                        },
+                        color: theme.titleColor
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 6,
+                        font: {
+                            size: 11,
+                            family: "'Inter', sans-serif"
+                        },
+                        color: theme.textColor
+                    },
+                    title: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            hover: {
+                mode: 'index',
+                intersect: false
+            }
+        }
+    });
+
+    // Update performance summary cards
+    if (data.summary) {
+        const basketFinal = data.summary.basket_final;
+        const niftyFinal = data.summary.nifty_final;
+        const basketReturn = data.summary.basket_return_pct;
+        const niftyReturn = data.summary.nifty_return_pct;
+
+        document.getElementById('basket-final-value').textContent = '₹' + basketFinal.toFixed(2);
+        document.getElementById('nifty-final-value').textContent = '₹' + niftyFinal.toFixed(2);
+
+        document.getElementById('basket-return').textContent = 'Return: ' + (basketReturn >= 0 ? '+' : '') + basketReturn.toFixed(2) + '%';
+        document.getElementById('nifty-return').textContent = 'Return: ' + (niftyReturn >= 0 ? '+' : '') + niftyReturn.toFixed(2) + '%';
+    }
+}
 
 async function loadPerformanceChart(period = '1m') {
     try {
@@ -178,7 +387,7 @@ async function loadPerformanceChart(period = '1m') {
         const basketId = document.querySelector('[data-basket-id]')?.dataset.basketId;
         if (!basketId) {
             console.error('Basket ID not found in DOM');
-            document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: #999;">Unable to load chart data</p>';
+            document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Unable to load chart data</p>';
             return;
         }
 
@@ -186,225 +395,28 @@ async function loadPerformanceChart(period = '1m') {
         const data = await response.json();
 
         if (data.success) {
-            const ctx = document.getElementById('performanceChart').getContext('2d');
-
-            // Destroy existing chart if it exists
-            if (chartInstance) {
-                chartInstance.destroy();
-            }
-
-            // Create gradients for better visual effect
-            const gradientBasket = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientBasket.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
-            gradientBasket.addColorStop(1, 'rgba(102, 126, 234, 0.01)');
-
-            const gradientNifty = ctx.createLinearGradient(0, 0, 0, 400);
-            gradientNifty.addColorStop(0, 'rgba(255, 99, 132, 0.4)');
-            gradientNifty.addColorStop(1, 'rgba(255, 99, 132, 0.01)');
-
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.labels,
-                    datasets: [
-                        {
-                            label: data.datasets.basket.label,
-                            data: data.datasets.basket.data,
-                            borderColor: 'rgb(102, 126, 234)',
-                            backgroundColor: gradientBasket,
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            pointHoverBackgroundColor: 'rgb(102, 126, 234)',
-                            pointHoverBorderColor: '#fff',
-                            pointHoverBorderWidth: 2
-                        },
-                        {
-                            label: data.datasets.nifty.label,
-                            data: data.datasets.nifty.data,
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: gradientNifty,
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            pointHoverBackgroundColor: 'rgb(255, 99, 132)',
-                            pointHoverBorderColor: '#fff',
-                            pointHoverBorderWidth: 2
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            align: 'end',
-                            labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                padding: 20,
-                                font: {
-                                    size: 13,
-                                    family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-                                }
-                            }
-                        },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleColor: '#fff',
-                            titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                            },
-                            bodyColor: '#fff',
-                            bodyFont: {
-                                size: 13
-                            },
-                            padding: 12,
-                            displayColors: true,
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                            borderWidth: 1,
-                            callbacks: {
-                                title: function (tooltipItems) {
-                                    return 'Date: ' + tooltipItems[0].label;
-                                },
-                                label: function (context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    const value = context.parsed.y;
-                                    label += '₹' + value.toFixed(2);
-                                    return label;
-                                },
-                                footer: function (tooltipItems) {
-                                    // Show gain/loss from ₹100
-                                    const basketValue = tooltipItems[0].parsed.y;
-                                    const niftyValue = tooltipItems[1] ? tooltipItems[1].parsed.y : 100;
-                                    const basketChange = basketValue - 100;
-                                    const niftyChange = niftyValue - 100;
-
-                                    return [
-                                        '',
-                                        tooltipItems[0].dataset.label + ' Return: ' + (basketChange >= 0 ? '+' : '') + basketChange.toFixed(2) + '%',
-                                        tooltipItems[1] ? (tooltipItems[1].dataset.label + ' Return: ' + (niftyChange >= 0 ? '+' : '') + niftyChange.toFixed(2) + '%') : ''
-                                    ];
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: false,
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)',
-                                drawBorder: false
-                            },
-                            ticks: {
-                                callback: function (value) {
-                                    return '₹' + value.toFixed(0);
-                                },
-                                font: {
-                                    size: 12
-                                },
-                                color: '#666'
-                            },
-                            title: {
-                                display: true,
-                                text: 'Value of ₹100 Invested',
-                                font: {
-                                    size: 13,
-                                    weight: 'bold'
-                                },
-                                color: '#333'
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false,
-                                drawBorder: false
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 0,
-                                autoSkip: true,
-                                maxTicksLimit: 10,
-                                font: {
-                                    size: 11
-                                },
-                                color: '#666'
-                            },
-                            title: {
-                                display: true,
-                                text: 'Date',
-                                font: {
-                                    size: 13,
-                                    weight: 'bold'
-                                },
-                                color: '#333'
-                            }
-                        }
-                    },
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    hover: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                }
-            });
-
-            // Update performance summary cards
-            if (data.summary) {
-                const basketFinal = data.summary.basket_final;
-                const niftyFinal = data.summary.nifty_final;
-                const basketReturn = data.summary.basket_return_pct;
-                const niftyReturn = data.summary.nifty_return_pct;
-
-                document.getElementById('basket-final-value').textContent = '₹' + basketFinal.toFixed(2);
-                document.getElementById('nifty-final-value').textContent = '₹' + niftyFinal.toFixed(2);
-
-                document.getElementById('basket-return').textContent = 'Return: ' + (basketReturn >= 0 ? '+' : '') + basketReturn.toFixed(2) + '%';
-                document.getElementById('nifty-return').textContent = 'Return: ' + (niftyReturn >= 0 ? '+' : '') + niftyReturn.toFixed(2) + '%';
-            }
+            cachedChartData = data; // Cache data
+            renderChart(data); // Render
         } else {
-            document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: #999;">Unable to load chart data: ' + (data.error || 'Unknown error') + '</p>';
+            document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Unable to load chart data: ' + (data.error || 'Unknown error') + '</p>';
         }
     } catch (error) {
         console.error('Error loading chart:', error);
-        document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: #999;">Unable to load chart data</p>';
+        document.querySelector('.chart-section').innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Unable to load chart data</p>';
     }
 }
-
 
 // Handle period button clicks
 document.querySelectorAll('.period-btn').forEach(button => {
     button.addEventListener('click', function () {
         const period = this.getAttribute('data-period');
 
-        // Update button states
-        document.querySelectorAll('.period-btn').forEach(btn => {
-            btn.style.background = 'white';
-            btn.style.color = '#333';
-            btn.style.borderColor = '#ddd';
-            btn.classList.remove('active');
-        });
-
-        this.style.background = '#667eea';
-        this.style.color = 'white';
-        this.style.borderColor = '#667eea';
+        // Update active class
+        document.querySelectorAll('.period-btn').forEach(btn => btn.classList.remove('active'));
         this.classList.add('active');
+
+        // Remove manual style manipulation!
+        // Styles are handled by CSS class .active
 
         // Reload chart with new period
         loadPerformanceChart(period);
@@ -415,6 +427,22 @@ document.querySelectorAll('.period-btn').forEach(button => {
 // Load chart when page is ready
 document.addEventListener('DOMContentLoaded', () => {
     loadPerformanceChart('1m');  // Default to 1 month
+
+    // Watch for theme changes to re-render chart
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                if (cachedChartData) {
+                    renderChart(cachedChartData);
+                }
+            }
+        });
+    });
+
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme']
+    });
 });
 
 // Share Basket Functionality
