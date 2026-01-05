@@ -251,6 +251,33 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',  # Default backend (fallback)
 ]
 
+# ============ Session Configuration ============
+# Configure session cookies to work properly on Railway with HTTPS
+# Language preference is stored in session, so this is critical for i18n
+IS_RAILWAY = os.environ.get('RAILWAY_ENVIRONMENT') is not None
+
+if IS_RAILWAY:
+    # Production (Railway) - Use secure cookies with HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'  # Allow language change redirects
+    CSRF_COOKIE_SAMESITE = 'Lax'
+else:
+    # Local development - Allow http cookies
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_HTTPONLY = True
+    CSRF_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Session engine - database-backed sessions for persistence
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_SAVE_EVERY_REQUEST = False  # Only save when modified (better performance)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
