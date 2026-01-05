@@ -34,6 +34,31 @@ A web application for managing stock baskets with equal-weighted allocation.
 3. View basket details
 4. Calculate profit/loss
 
+## Deployment
+
+### Railway Production Deployment
+
+This application is production-ready and can be deployed to Railway with minimal configuration.
+
+**Quick Start:**
+- 📖 [Quick Start Guide](docs/RAILWAY_PRODUCTION_QUICK_START.md) - Fast track to production
+- ✅ [Deployment Checklist](docs/RAILWAY_CHECKLIST.md) - Step-by-step verification
+- 📚 [Detailed Guide](docs/RAILWAY_DEPLOYMENT.md) - Comprehensive deployment documentation
+
+**Key Points:**
+- ✅ Settings are **environment-aware** (automatically detects local vs. production)
+- ✅ Just set environment variables in Railway Dashboard - no code changes needed
+- ✅ Supports PostgreSQL (production) and SQLite (local development)
+- ✅ Production security enabled (DEBUG=False, CSRF protection, etc.)
+
+### Generate Production Secret Key
+
+```bash
+python generate_secret_key.py
+```
+
+Then set the output as `SECRET_KEY` environment variable in Railway.
+
 ## License
 
 MIT

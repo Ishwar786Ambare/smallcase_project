@@ -1,211 +1,208 @@
-# 🚀 Railway Deployment Guide - Smallcase Project
+# Railway Production Deployment Guide
+
+This guide explains how to deploy your Django application to Railway with production settings.
 
 ## Prerequisites
-- GitHub account
-- Railway account (sign up at [railway.app](https://railway.app))
-- Your project pushed to GitHub
 
----
+1. Railway account (https://railway.app)
+2. GitHub repository connected to Railway
+3. PostgreSQL database provisioned on Railway
 
-## Step 1: Push Your Code to GitHub
+## Step-by-Step Deployment
 
-If you haven't already, push your code to GitHub:
+### 1. Generate Production SECRET_KEY
 
-```powershell
-# Initialize git if not already done
-git init
-
-# Add all files
-git add .
-
-# Commit
-git commit -m "Prepare for Railway deployment"
-
-# Add your GitHub repo as origin (replace with your repo URL)
-git remote add origin https://github.com/YOUR_USERNAME/smallcase_project.git
-
-# Push to GitHub
-git push -u origin main
-```
-
----
-
-## Step 2: Create a Railway Account
-
-1. Go to [railway.app](https://railway.app)
-2. Click **"Login"** → **"Login with GitHub"**
-3. Authorize Railway to access your GitHub
-
----
-
-## Step 3: Create a New Project on Railway
-
-1. Click **"New Project"** (top right)
-2. Select **"Deploy from GitHub repo"**
-3. Find and select your **smallcase_project** repository
-4. Click **"Deploy Now"**
-
-Railway will start building your project automatically.
-
----
-
-## Step 4: Add PostgreSQL Database
-
-1. In your Railway project dashboard, click **"New"** (or the + button)
-2. Select **"Database"** → **"Add PostgreSQL"**
-3. Wait for the database to provision (takes ~30 seconds)
-4. The `DATABASE_URL` will be **automatically linked** to your app!
-
----
-
-## Step 5: Set Environment Variables
-
-1. Click on your **web service** (not the database)
-2. Go to **"Variables"** tab
-3. Add the following variables:
-
-| Variable | Value |
-|----------|-------|
-| `SECRET_KEY` | Generate at: https://djecrety.ir/ |
-| `DEBUG` | `False` |
-| `ALLOWED_HOSTS` | `.railway.app,localhost` |
-| `CSRF_TRUSTED_ORIGINS` | `https://*.railway.app` |
-
-**To generate SECRET_KEY:**
-- Visit https://djecrety.ir/
-- Copy the generated key
-- Paste it as the value for `SECRET_KEY`
-
----
-
-## Step 6: Check Build Logs
-
-1. Go to **"Deployments"** tab
-2. Click on the latest deployment
-3. Monitor the build logs
-4. Wait for "Deployment was successful" message
-
----
-
-## Step 7: Run Database Migrations
-
-Railway should run migrations automatically (configured in `railway.json`). 
-
-If you need to run them manually:
-
-1. Go to project settings → **"Settings"** tab
-2. Or use Railway CLI:
+Run this command locally to generate a secure secret key:
 
 ```bash
-# Install Railway CLI
-npm i -g @railway/cli
-
-# Login
-railway login
-
-# Run migrations
-railway run python manage.py migrate
+python generate_secret_key.py
 ```
 
----
+Copy the generated key for use in Railway environment variables.
 
-## Step 8: Create a Superuser
+### 2. Configure Environment Variables on Railway
 
-Use Railway CLI to create an admin user:
+Go to your Railway project → Variables tab and add:
+
+#### Required Variables:
 
 ```bash
-railway run python manage.py createsuperuser
+# Core Django Settings
+DEBUG=False
+SECRET_KEY=<paste-your-generated-secret-key-here>
+
+# Allowed Hosts (update with your Railway domain)
+ALLOWED_HOSTS=.railway.app,.up.railway.app
+
+# CSRF Protection (use https for Railway)
+CSRF_TRUSTED_ORIGINS=https://*.railway.app,https://*.up.railway.app
 ```
 
-Enter your email, username, and password when prompted.
+#### AI Configuration (at least one provider):
 
----
+```bash
+# Using Groq (Recommended - 30 requests/min free)
+AI_PROVIDER=groq
+GROQ_API_KEY=<your-groq-api-key>
+GROQ_MODEL=llama-3.3-70b-versatile
+```
 
-## Step 9: Access Your Deployed App
+**OR**
 
-1. In your project dashboard, click on your **web service**
-2. Go to **"Settings"** tab
-3. Scroll down to **"Domains"**
-4. Click **"Generate Domain"** to get a free `.railway.app` URL
-5. Click the generated link to open your app!
+```bash
+# Using Google Gemini (15 requests/min free)
+AI_PROVIDER=gemini
+GEMINI_API_KEY=<your-gemini-api-key>
+GEMINI_MODEL=gemini-1.5-flash
+```
 
-Your app will be available at: `https://your-app-name.railway.app`
+#### Optional Variables:
 
----
+```bash
+# Backblaze B2 (if using for static file storage)
+BACKBLAZE_APPLICATION_KEY_ID=<your-key-id>
+BACKBLAZE_APPLICATION_KEY=<your-application-key>
+BACKBLAZE_BUCKET_NAME=<your-bucket-name>
+BACKBLAZE_S3_ENDPOINT_URL=https://s3.us-east-005.backblazeb2.com
+```
 
-## Step 10: Verify WebSocket Chat Works
+### 3. Railway Automatically Provides
 
-1. Open your deployed app in **two different browsers**
-2. Log in with different accounts
-3. Open the chat widget (bottom right)
-4. Send messages - they should appear **instantly** in the other browser!
+Railway automatically sets these - **DO NOT** set them manually:
 
----
+- `DATABASE_URL` - PostgreSQL connection string
+- `PORT` - Application port
+- `RAILWAY_ENVIRONMENT` - Deployment environment
 
-## Troubleshooting
+### 4. Verify Dockerfile
 
-### Build Fails
-- Check build logs for errors
-- Ensure `requirements.txt` has all dependencies
-- Verify `Procfile` exists and is correct
+Your `Dockerfile` should already be configured correctly. Railway uses it to build your app.
 
-### Static Files Not Loading
-- Make sure you ran `collectstatic`
-- Check that `whitenoise` is in MIDDLEWARE
-- Verify `STATIC_ROOT` is set correctly
+### 5. Deploy
 
-### Database Errors
-- Ensure PostgreSQL database is added
-- Check that `DATABASE_URL` is linked
-- Run migrations: `railway run python manage.py migrate`
+Railway will automatically deploy when you push to your connected GitHub repository.
 
-### WebSocket "Offline"
-- Railway supports WebSockets natively
-- Make sure `daphne` is used in Procfile (not gunicorn)
-- Check browser console for errors
+## Post-Deployment Steps
 
----
+### Run Database Migrations
 
-## Environment Variables Summary
+After first deployment, run migrations via Railway's shell:
 
-| Variable | Description | Example Value |
-|----------|-------------|---------------|
-| `SECRET_KEY` | Django secret key | `your-generated-secret-key` |
-| `DEBUG` | Debug mode | `False` |
-| `ALLOWED_HOSTS` | Allowed domains | `.railway.app,localhost` |
-| `CSRF_TRUSTED_ORIGINS` | CSRF origins | `https://*.railway.app` |
-| `DATABASE_URL` | PostgreSQL URL | Auto-set by Railway |
+```bash
+python manage.py migrate
+```
 
----
+### Create Superuser (Admin Account)
 
-## Files Created for Deployment
+Create an admin account to access Django admin:
 
-| File | Purpose |
-|------|---------|
-| `Procfile` | Tells Railway to run Daphne ASGI server |
-| `runtime.txt` | Specifies Python version |
-| `railway.json` | Railway-specific configuration |
-| `.gitignore` | Excludes unnecessary files from git |
+```bash
+python manage.py createsuperuser
+```
 
----
+### Collect Static Files
 
-## Free Tier Limits
+Static files are collected automatically during build (see Dockerfile), but you can manually run:
 
-Railway's free tier includes:
-- **$5/month credit** (no credit card required)
-- ~500 hours of runtime
-- 512 MB RAM
-- 1 GB disk
-- PostgreSQL database included
+```bash
+python manage.py collectstatic --noinput
+```
 
-This is enough for development and small production apps!
+## Monitoring Your Application
 
----
+### Check Logs
+
+In Railway Dashboard:
+- Go to your service
+- Click "Logs" tab
+- Monitor for errors or issues
+
+### Common Issues and Solutions
+
+#### Issue: 500 Internal Server Error
+
+**Solution**: Check logs and ensure:
+- `DEBUG=False` is set
+- `SECRET_KEY` is configured
+- `ALLOWED_HOSTS` includes your Railway domain
+- Database migrations are complete
+
+#### Issue: Static Files Not Loading
+
+**Solution**: 
+- Verify `python manage.py collectstatic` ran during build
+- Check Dockerfile includes the collectstatic command
+- Ensure WhiteNoise is in MIDDLEWARE (already configured in settings.py)
+
+#### Issue: CSRF Verification Failed
+
+**Solution**:
+- Ensure `CSRF_TRUSTED_ORIGINS` uses **https://** (not http://)
+- Domain must match your Railway URL
+
+#### Issue: Database Connection Error
+
+**Solution**:
+- Verify Railway PostgreSQL is provisioned
+- Check `DATABASE_URL` is automatically set by Railway
+- Run migrations: `python manage.py migrate`
+
+## Switching Between Development and Production
+
+### Local Development
+
+Your `.env` file for local development:
+
+```bash
+DEBUG=True
+SECRET_KEY=<your-dev-secret-key>
+ALLOWED_HOSTS=localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+AI_PROVIDER=groq
+GROQ_API_KEY=<your-groq-api-key>
+```
+
+### Railway Production
+
+Railway environment variables (set in dashboard):
+
+```bash
+DEBUG=False
+SECRET_KEY=<strong-production-secret-key>
+ALLOWED_HOSTS=.railway.app,.up.railway.app
+CSRF_TRUSTED_ORIGINS=https://*.railway.app,https://*.up.railway.app
+AI_PROVIDER=groq
+GROQ_API_KEY=<your-groq-api-key>
+```
+
+## Security Best Practices
+
+1. ✅ **Never commit `.env` file to Git** (already in `.gitignore`)
+2. ✅ **Always use DEBUG=False in production**
+3. ✅ **Use strong, unique SECRET_KEY for production**
+4. ✅ **Use HTTPS for CSRF_TRUSTED_ORIGINS in production**
+5. ✅ **Keep API keys secure and rotate them periodically**
+6. ✅ **Regularly update dependencies**: `pip install --upgrade -r requirements.txt`
+
+## URLs and Access
+
+After deployment:
+
+- **Application**: `https://<your-app>.up.railway.app`
+- **Admin Panel**: `https://<your-app>.up.railway.app/admin`
+- **API Endpoints**: `https://<your-app>.up.railway.app/api/...`
 
 ## Need Help?
 
-- Railway Documentation: https://docs.railway.app
-- Railway Discord: https://discord.gg/railway
-- Django Channels Docs: https://channels.readthedocs.io
+- Railway Docs: https://docs.railway.app
+- Django Deployment Docs: https://docs.djangoproject.com/en/stable/howto/deployment/
+- Project Issues: Create an issue in your GitHub repository
 
-Good luck with your deployment! 🎉
+## Summary
+
+Your Django application is **already configured** to work with both local development and Railway production. The `settings.py` file reads environment variables and adjusts accordingly:
+
+- **Local**: Uses SQLite, DEBUG=True, local cache
+- **Railway**: Uses PostgreSQL, DEBUG=False, production security
+
+Just set the environment variables in Railway Dashboard, and you're ready to deploy! 🚀
