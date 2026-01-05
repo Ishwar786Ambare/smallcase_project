@@ -107,3 +107,25 @@ class ChatMessageAdmin(admin.ModelAdmin):
     def get_short_content(self, obj):
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
     get_short_content.short_description = 'Message'
+
+
+# ==========================================
+# Tiny URL Admin Configuration
+# ==========================================
+
+from .models import TinyURL
+
+
+@admin.register(TinyURL)
+class TinyURLAdmin(admin.ModelAdmin):
+    list_display = ['short_code', 'get_basket_name', 'click_count', 'is_active', 'created_by', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['short_code', 'original_url', 'basket__name', 'created_by__email']
+    readonly_fields = ['short_code', 'original_url', 'click_count', 'created_at', 'created_by']
+    autocomplete_fields = ['basket', 'created_by']
+    ordering = ['-created_at']
+    date_hierarchy = 'created_at'
+    
+    def get_basket_name(self, obj):
+        return obj.basket.name if obj.basket else 'N/A'
+    get_basket_name.short_description = 'Basket'

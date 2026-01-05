@@ -1281,3 +1281,105 @@ def ai_chat(request):
             'error': str(e),
             'response': "I'm having trouble right now. Please try again or contact human support."
         })
+
+
+# ==========================================
+# Tiny URL for Basket Sharing
+# ==========================================
+
+import string
+import random
+from .models import TinyURL
+
+
+def generate_short_code(length=6):
+    """Generate a random short code for URLs"""
+    characters = string.ascii_letters + string.digits
+    while True:
+        code = ''.join(random.choice(characters) for _ in range(length))
+        # Check if this code already exists
+        if not TinyURL.objects.filter(short_code=code).exists():
+            return code
+
+
+@login_required
+def create_tiny_url(request, basket_id):
+    """Create a tiny URL for basket sharing"""
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
+    
+    # Check if a tiny URL already exists for this basket
+    existing_tiny_url = TinyURL.objects.filter(
+        basket=basket,
+        is_active=True
+    ).first()
+    
+    if existing_tiny_url and not existing_tiny_url.is_expired():
+        # Return existing URL
+        short_url = request.build_absolute_uri(f'/s/{existing_tiny_url.short_code}')
+        return JsonResponse({
+            'success': True,
+            'short_code': existing_tiny_url.short_code,
+            'short_url': short_url,
+            'original_url': existing_tiny_url.original_url,
+            'click_count': existing_tiny_url.click_count
+        })
+    
+    # Create new tiny URL
+    original_url = request.build_absolute_uri(f'/basket/{basket_id}/')
+    short_code = generate_short_code()
+    
+    tiny_url = TinyURL.objects.create(
+        short_code=short_code,
+        original_url=original_url,
+        basket=basket,
+        created_by=request.user,
+        is_active=True
+    )
+    
+    short_url = request.build_absolute_uri(f'/s/{short_code}')
+    
+    return JsonResponse({
+        'success': True,
+        'short_code': short_code,
+        'short_url': short_url,
+        'original_url': original_url,
+        'click_count': 0
+    })
+
+
+def redirect_tiny_url(request, short_code):
+    """Redirect from short URL to original basket URL"""
+    tiny_url = get_object_or_404(TinyURL, short_code=short_code, is_active=True)
+    
+    # Check if expired
+    if tiny_url.is_expired():
+        messages.error(request, 'This link has expired.')
+        return redirect('home')
+    
+    # Increment click count
+    tiny_url.increment_clicks()
+    
+    # Redirect to the basket detail page
+    # Extract basket_id from the original URL or use the basket relation
+    if tiny_url.basket:
+        return redirect('basket_detail', basket_id=tiny_url.basket.id)
+    else:
+        # Fallback to original URL if basket is not linked
+        return redirect(tiny_url.original_url)
+
+
+@login_required
+def tiny_url_stats(request, short_code):
+    """Get statistics for a tiny URL"""
+    tiny_url = get_object_or_404(TinyURL, short_code=short_code, created_by=request.user)
+    
+    return JsonResponse({
+        'success': True,
+        'short_code': tiny_url.short_code,
+        'original_url': tiny_url.original_url,
+        'click_count': tiny_url.click_count,
+        'created_at': tiny_url.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+        'expires_at': tiny_url.expires_at.strftime('%Y-%m-%d %H:%M:%S') if tiny_url.expires_at else None,
+        'is_active': tiny_url.is_active,
+        'is_expired': tiny_url.is_expired()
+    })

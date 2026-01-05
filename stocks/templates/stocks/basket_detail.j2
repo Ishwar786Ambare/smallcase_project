@@ -134,6 +134,139 @@
         background: #4b5563;
     }
 
+    .btn-info {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background: #2563eb;
+    }
+
+    /* Share Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: var(--container-bg);
+        padding: 30px;
+        border-radius: 15px;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .modal-header h3 {
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--text-secondary);
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    .share-link-container {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+    }
+
+    .share-link-input {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        background: var(--card-bg);
+        color: var(--text-primary);
+        font-size: 14px;
+    }
+
+    .copy-btn {
+        padding: 12px 20px;
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .copy-btn:hover {
+        background: #059669;
+        transform: translateY(-2px);
+    }
+
+    .copy-btn.copied {
+        background: #667eea;
+    }
+
+    .share-stats {
+        margin-top: 15px;
+        padding: 15px;
+        background: var(--card-bg);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+
     .section-title {
         font-size: 1.6em;
         color: var(--text-primary);
@@ -504,12 +637,14 @@
             <a href="{{ url('home') }}" class="btn btn-primary">← Back to Home</a>
             <a href="{{ url('basket_performance', args=[basket.id]) }}" class="btn btn-success">📊 Performance Analysis</a>
             <a href="{{ url('basket_duplicate', args=[basket.id]) }}" class="btn btn-secondary">📋 Duplicate Basket</a>
+            <button id="share-basket-btn" class="btn btn-info" onclick="shareBasket({{ basket.id }})">🔗 Share Basket</button>
             <a href="{{ url('basket_delete', args=[basket.id]) }}" class="btn btn-danger"
                onclick="return confirm('Are you sure you want to delete this basket?')">
                 Delete Basket
             </a>
         </div>
     </div>
+
 
     <div id="message-container"></div>
 
@@ -677,6 +812,30 @@
         </p>
     </div>
 </div>
+
+<!-- Share Modal -->
+<div id="share-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🔗 Share Your Basket</h3>
+            <button class="modal-close" onclick="closeShareModal()">×</button>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">
+            Share this short link with anyone to show them your basket:
+        </p>
+        <div class="share-link-container">
+            <input type="text" id="share-link-input" class="share-link-input" readonly>
+            <button class="copy-btn" onclick="copyShareLink()">
+                <span id="copy-btn-text">Copy</span>
+            </button>
+        </div>
+        <div id="share-stats" class="share-stats" style="display: none;">
+            <strong>Link Stats:</strong><br>
+            <span id="stats-content"></span>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block javascript %}
@@ -1082,6 +1241,105 @@ document.querySelectorAll('.period-btn').forEach(button => {
 // Load chart when page is ready
 document.addEventListener('DOMContentLoaded', () => {
     loadPerformanceChart('1m');  // Default to 1 month
+});
+
+// Share Basket Functionality
+async function shareBasket(basketId) {
+    try {
+        // Show loading state
+        const shareBtn = document.getElementById('share-basket-btn');
+        const originalText = shareBtn.innerHTML;
+        shareBtn.innerHTML = '⏳ Generating...';
+        shareBtn.disabled = true;
+        
+        // Call API to create tiny URL
+        const response = await fetch(`/basket/${basketId}/share/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrftoken,
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show modal with the short URL
+            document.getElementById('share-link-input').value = data.short_url;
+            document.getElementById('share-modal').classList.add('active');
+            
+            // Show stats if available
+            if (data.click_count !== undefined) {
+                const statsDiv = document.getElementById('share-stats');
+                const statsContent = document.getElementById('stats-content');
+                statsContent.innerHTML = `This link has been clicked ${data.click_count} time${data.click_count !== 1 ? 's' : ''}`;
+                statsDiv.style.display = 'block';
+            }
+        } else {
+            showMessage('Failed to create share link: ' + (data.error || 'Unknown error'), 'error');
+        }
+        
+        // Reset button
+        shareBtn.innerHTML = originalText;
+        shareBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error creating share link:', error);
+        showMessage('Failed to create share link', 'error');
+        
+        // Reset button
+        const shareBtn = document.getElementById('share-basket-btn');
+        shareBtn.innerHTML = '🔗 Share Basket';
+        shareBtn.disabled = false;
+    }
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').classList.remove('active');
+    // Reset copy button
+    const copyBtn = document.getElementById('copy-btn-text');
+    copyBtn.textContent = 'Copy';
+    copyBtn.parentElement.classList.remove('copied');
+}
+
+async function copyShareLink() {
+    const linkInput = document.getElementById('share-link-input');
+    const copyBtnText = document.getElementById('copy-btn-text');
+    const copyBtn = copyBtnText.parentElement;
+    
+    try {
+        await navigator.clipboard.writeText(linkInput.value);
+        copyBtnText.textContent = 'Copied!';
+        copyBtn.classList.add('copied');
+        
+        // Reset after 2 seconds
+        setTimeout(() => {
+            copyBtnText.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+        }, 2000);
+        
+        showMessage('Link copied to clipboard!', 'success');
+    } catch (error) {
+        // Fallback for older browsers
+        linkInput.select();
+        document.execCommand('copy');
+        copyBtnText.textContent = 'Copied!';
+        copyBtn.classList.add('copied');
+        
+        setTimeout(() => {
+            copyBtnText.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+        }, 2000);
+        
+        showMessage('Link copied to clipboard!', 'success');
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('share-modal');
+    if (e.target === modal) {
+        closeShareModal();
+    }
 });
 </script>
 {% endblock %}
