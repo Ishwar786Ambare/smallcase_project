@@ -1,0 +1,65 @@
+/* ========================================
+   BASE STYLES - Core theme variables and global styles
+   ======================================== */
+
+/* CSS Variables for Theme */
+:root[data-theme="light"] {
+    --bg-gradient-start: #667eea;
+    --bg-gradient-end: #764ba2;
+    --container-bg: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    --card-bg: #f9fafb;
+    --card-border: #e5e7eb;
+    --table-hover: #f3f4f6;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --shadow-lighter: rgba(0, 0, 0, 0.05);
+    --border-color: #e5e7eb;
+    --empty-state-color: #9ca3af;
+}
+
+:root[data-theme="dark"] {
+    --bg-gradient-start: #1a1a2e;
+    --bg-gradient-end: #16213e;
+    --container-bg: #0f172a;
+    --text-primary: #e2e8f0;
+    --text-secondary: #cbd5e1;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --table-hover: #334155;
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --shadow-light: rgba(0, 0, 0, 0.3);
+    --shadow-lighter: rgba(0, 0, 0, 0.2);
+    --border-color: #334155;
+    --empty-state-color: #64748b;
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    min-height: 100vh;
+    padding: 20px;
+    transition: background 0.3s ease;
+    color: var(--text-primary);
+}
+
+/* Mobile Responsive - Base */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 8px;
+    }
+}

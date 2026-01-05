@@ -436,5 +436,10 @@
 {% endblock %}
 
 {% block javascript %}
-<script src="{{ static('js/pages/home.js') }}"></script>
+    <script>
+        $(document).ready(function() {
+            console.log('ready');
+            $('#stocks-table').DataTable();
+        });
+    </script>
 {% endblock %}

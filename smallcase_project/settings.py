@@ -186,7 +186,16 @@ LOCALE_PATHS = [
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] if os.path.exists(os.path.join(BASE_DIR, 'static')) else []
+
+# Add both project-level static/ and app-level static/ directories
+STATICFILES_DIRS = []
+if os.path.exists(os.path.join(BASE_DIR, 'static')):
+    STATICFILES_DIRS.append(os.path.join(BASE_DIR, 'static'))
+
+# Add stocks app static directory
+stocks_static = os.path.join(BASE_DIR, 'stocks', 'static')
+if os.path.exists(stocks_static):
+    STATICFILES_DIRS.append(stocks_static)
 
 # Whitenoise for serving static files in production
 STORAGES = {
