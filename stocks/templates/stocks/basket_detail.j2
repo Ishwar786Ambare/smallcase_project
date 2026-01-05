@@ -681,7 +681,7 @@
     </div>
 
     <!-- Performance Comparison Chart -->
-    <div class="chart-section">
+    <div class="chart-section" data-basket-id="{{ basket.id }}">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
             <h2 class="section-title" style="margin: 0;">📈 Performance Comparison</h2>
             <div class="period-selector" style="display: flex; gap: 8px; flex-wrap: wrap;">
@@ -839,7 +839,5 @@
 {% endblock %}
 
 {% block javascript %}
-
-{% endblock %}
-
 <script src="{{ static('js/pages/basket-detail.js') }}"></script>
+{% endblock %}
