@@ -990,6 +990,7 @@
     let reconnectAttempts = 0;
     let typingTimeout = null;
     let displayedMessageIds = new Set();  // Track displayed messages to prevent duplicates
+    let isAIOnly = false;  // Track if current chat is AI-only
     
     // DOM Elements
     const container = document.getElementById('chat-widget-container');
@@ -1028,6 +1029,21 @@
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1];
         return cookieValue || '';
+    }
+    
+    // Get API URL with language prefix to avoid redirects
+    function getApiUrl(path) {
+        // Get the current language prefix from the URL path (e.g., /en/, /hi/, /mr/)
+        const pathParts = window.location.pathname.split('/');
+        const langCode = pathParts[1]; // First part after the domain
+        
+        // Check if it's a valid language code (2-3 characters)
+        if (langCode && langCode.length <= 3 && /^[a-z]+$/i.test(langCode)) {
+            // Prepend language prefix to API path
+            return `/${langCode}${path}`;
+        }
+        // If no language prefix detected, return path as is
+        return path;
     }
     
     // WebSocket Connection
@@ -1187,15 +1203,18 @@
     async function loadMessages() {
         try {
             const url = currentGroupId 
-                ? `/api/chat/messages/?group_id=${currentGroupId}`
-                : '/api/chat/messages/';
+                ? getApiUrl(`/api/chat/messages/?group_id=${currentGroupId}`)
+                : getApiUrl(`/api/chat/messages/?support_type=${supportType}`);  // Pass support type to backend
             
             const response = await fetch(url);
             const data = await response.json();
             
             if (data.success) {
                 currentGroupId = data.group_id;
+                isAIOnly = data.is_ai_only || false;  // Track if this is an AI-only chat
+                console.log('💬 Loaded chat - Group ID:', currentGroupId, 'AI-only:', isAIOnly, 'Support type:', supportType);
                 updateHeader(data.group_name, data.group_avatar);
+                console.log('data response',data.messages)
                 renderMessages(data.messages);
                 
                 // Connect WebSocket after we know the group
@@ -1321,14 +1340,14 @@
                 created_at: time
             });
             
-            // ONLY get AI response if this is an AI support chat
-            console.log('🔍 AI Check - supportType:', supportType, 'currentGroupType:', currentGroupType);
-            if (supportType === 'ai' && currentGroupType === 'support') {
+            // ONLY get AI response if this is an AI-only support chat
+            console.log('🔍 AI Check - isAIOnly:', isAIOnly, 'supportType:', supportType, 'currentGroupType:', currentGroupType);
+            if (isAIOnly && currentGroupType === 'support') {
                 console.log('✅ Calling AI - conditions met!');
                 getAIResponse(content);
             } else {
-                console.log('❌ Skipping AI - supportType:', supportType, 'groupType:', currentGroupType);
-                if (supportType !== 'ai') console.log('   Reason: supportType is not "ai"');
+                console.log('❌ Skipping AI - isAIOnly:', isAIOnly, 'groupType:', currentGroupType);
+                if (!isAIOnly) console.log('   Reason: Chat is not AI-only');
                 if (currentGroupType !== 'support') console.log('   Reason: currentGroupType is not "support"');
             }
         } else {
@@ -1340,7 +1359,7 @@
     // Fallback: Send Message via HTTP API
     async function sendMessageHTTP(content) {
         try {
-            const response = await fetch('/api/chat/send/', {
+            const response = await fetch(getApiUrl('/api/chat/send/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1359,8 +1378,8 @@
                 currentGroupId = data.group_id;
                 addMessageToUI(data.message);
                 
-                // Get AI response ONLY for AI support chats
-                if (supportType === 'ai' && currentGroupType === 'support') {
+                // Get AI response ONLY for AI-only support chats
+                if (isAIOnly && currentGroupType === 'support') {
                     getAIResponse(content);
                 }
             }
@@ -1371,11 +1390,13 @@
     
     // Get AI Response for support chat
     async function getAIResponse(userMessage) {
+        console.log('🤖 getAIResponse called with message:', userMessage);
         try {
             // Show AI typing animation
             showAITyping();
             
-            const response = await fetch('/api/ai/chat/', {
+            console.log('📡 Calling AI chat endpoint...');
+            const response = await fetch(getApiUrl('/api/ai/chat/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1386,14 +1407,17 @@
                 })
             });
             
+            console.log('📡 Response status:', response.status);
             const data = await response.json();
+            console.log('📡 Response data:', data);
             
             // Hide AI typing indicator
             hideAITyping();
             
             if (data.success && data.response) {
+                console.log('✅ AI response received, saving to chat...');
                 // Save AI response as a message
-                const saveResponse = await fetch('/api/chat/send/', {
+                const saveResponse = await fetch(getApiUrl('/api/chat/send/'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1407,6 +1431,7 @@
                 });
                 
                 const saveData = await saveResponse.json();
+                console.log('💾 Save response:', saveData);
                 if (saveData.success) {
                     addMessageToUI({
                         id: saveData.message.id,
@@ -1416,10 +1441,15 @@
                         message_type: 'text',
                         created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     });
+                } else {
+                    console.error('❌ Failed to save AI message:', saveData);
                 }
+            } else {
+                console.error('❌ AI response failed or empty:', data);
             }
         } catch (error) {
-            console.error('Error getting AI response:', error);
+            console.error('❌ Error getting AI response:', error);
+            console.error('❌ Error stack:', error.stack);
             hideAITyping();
         }
     }
@@ -1433,7 +1463,7 @@
     // Load Groups
     async function loadGroups() {
         try {
-            const response = await fetch('/api/chat/groups/');
+            const response = await fetch(getApiUrl('/api/chat/groups/'));
             const data = await response.json();
             
             if (data.success) {
@@ -1476,7 +1506,7 @@
     // Create Group
     async function createGroup(name, description, avatar, memberIds) {
         try {
-            const response = await fetch('/api/chat/groups/create/', {
+            const response = await fetch(getApiUrl('/api/chat/groups/create/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1510,7 +1540,7 @@
         if (!currentGroupId) return;
         
         try {
-            const response = await fetch(`/api/chat/groups/members/?group_id=${currentGroupId}`);
+            const response = await fetch(getApiUrl(`/api/chat/groups/members/?group_id=${currentGroupId}`));
             const data = await response.json();
             
             if (data.success) {
@@ -1546,7 +1576,7 @@
         if (!currentGroupId || !email) return;
         
         try {
-            const response = await fetch('/api/chat/groups/add-member/', {
+            const response = await fetch(getApiUrl('/api/chat/groups/add-member/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1578,7 +1608,7 @@
         if (!confirm('Are you sure you want to leave this group?')) return;
         
         try {
-            const response = await fetch('/api/chat/groups/leave/', {
+            const response = await fetch(getApiUrl('/api/chat/groups/leave/'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1611,7 +1641,7 @@
         }
         
         try {
-            const response = await fetch(`/api/chat/users/search/?q=${encodeURIComponent(query)}`);
+            const response = await fetch(getApiUrl(`/api/chat/users/search/?q=${encodeURIComponent(query)}`));
             const data = await response.json();
             
             if (data.success) {
@@ -1689,6 +1719,7 @@
         
         localStorage.setItem('preferredSupportType', supportType);
         currentGroupId = null;
+        isAIOnly = false;  // Reset AI-only flag when switching
         
         // Update UI
         if (supportType === 'ai') {

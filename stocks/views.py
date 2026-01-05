@@ -876,10 +876,10 @@ def chat_get_messages(request):
                 else:
                     return JsonResponse({'success': False, 'error': 'Not a member of this group'})
         else:
-            # For initial load, check localStorage preference (defaults to AI)
-            # Since we can't access it server-side, default to admin support
-            # The frontend will handle switching if needed
-            group = get_or_create_support_chat(request.user, is_ai_only=False)
+            # For initial load, check if frontend specified support type preference
+            support_type = request.GET.get('support_type', 'admin')  # 'ai' or 'admin'
+            is_ai_only = (support_type == 'ai')
+            group = get_or_create_support_chat(request.user, is_ai_only=is_ai_only)
         
         # Get messages
         messages_qs = ChatMessage.objects.filter(
@@ -917,7 +917,8 @@ def chat_get_messages(request):
             'messages': messages_data,
             'group_id': group.id,
             'group_name': group.name,
-            'group_avatar': group.avatar
+            'group_avatar': group.avatar,
+            'is_ai_only': group.is_ai_only  # Include this so frontend knows if AI should respond
         })
         
     except Exception as e:
@@ -1237,15 +1238,28 @@ def chat_search_users(request):
 
 # ============ AI Chat Support ============
 
-@login_required
 def ai_chat(request):
     """API endpoint for AI-powered chat responses"""
+    print(f"[DEBUG ai_chat] Request method: {request.method}")
+    print(f"[DEBUG ai_chat] Request headers: {dict(request.headers)}")
+    print(f"[DEBUG ai_chat] Request body: {request.body[:200] if request.body else 'Empty'}")
+    print(f"[DEBUG ai_chat] User authenticated: {request.user.is_authenticated}")
+    
+    # Check authentication - return JSON instead of redirecting
+    if not request.user.is_authenticated:
+        print("[DEBUG ai_chat] ERROR: User not authenticated")
+        return JsonResponse({'success': False, 'error': 'Authentication required'})
+    
     if request.method != 'POST':
+        print(f"[DEBUG ai_chat] ERROR: Method is {request.method}, not POST")
         return JsonResponse({'success': False, 'error': 'POST required'})
+
     
     try:
         data = json.loads(request.body) if request.body else {}
         user_message = data.get('message', '').strip()
+        
+        print(f"[DEBUG ai_chat] Parsed message: {user_message}")
         
         if not user_message:
             return JsonResponse({'success': False, 'error': 'Message is required'})
