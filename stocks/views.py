@@ -15,8 +15,25 @@ from .utils import (
     create_basket_with_stocks
 )
 from django.middleware.csrf import get_token
+from django.http import JsonResponse
+from functools import wraps
 
 User = get_user_model()  # Get the custom User model
+
+
+# Custom decorator for AJAX requests that need authentication
+def ajax_login_required(view_func):
+    """Decorator for AJAX views that require authentication - returns JSON instead of redirecting"""
+    from django.views.decorators.csrf import csrf_exempt
+    
+    @wraps(view_func)
+    @csrf_exempt
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
 
 
 # ============ Stock and Basket Views ============
@@ -768,7 +785,7 @@ def get_or_create_support_chat(user, is_ai_only=False):
     return group
 
 
-@login_required
+@ajax_login_required
 def chat_send_message(request):
     """API to send a chat message"""
     if request.method != 'POST':
@@ -836,7 +853,7 @@ def chat_send_message(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_get_messages(request):
     """API to get chat messages for a group"""
     group_id = request.GET.get('group_id')
@@ -920,7 +937,7 @@ def chat_get_messages(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_get_groups(request):
     """API to get user's chat groups"""
     try:
@@ -987,7 +1004,7 @@ def chat_get_groups(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_create_group(request):
     """API to create a new chat group"""
     if request.method != 'POST':
@@ -1053,7 +1070,7 @@ def chat_create_group(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_add_member(request):
     """API to add a member to a group"""
     if request.method != 'POST':
@@ -1112,7 +1129,7 @@ def chat_add_member(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_get_members(request):
     """API to get members of a group"""
     group_id = request.GET.get('group_id')
@@ -1153,7 +1170,7 @@ def chat_get_members(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required  
+@ajax_login_required
 def chat_leave_group(request):
     """API to leave a chat group"""
     if request.method != 'POST':
@@ -1201,7 +1218,7 @@ def chat_leave_group(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@ajax_login_required
 def chat_search_users(request):
     """API to search users for adding to groups"""
     query = request.GET.get('q', '').strip()
@@ -1233,17 +1250,13 @@ def chat_search_users(request):
 
 # ============ AI Chat Support ============
 
+@ajax_login_required
 def ai_chat(request):
     """API endpoint for AI-powered chat responses"""
     print(f"[DEBUG ai_chat] Request method: {request.method}")
     print(f"[DEBUG ai_chat] Request headers: {dict(request.headers)}")
     print(f"[DEBUG ai_chat] Request body: {request.body[:200] if request.body else 'Empty'}")
     print(f"[DEBUG ai_chat] User authenticated: {request.user.is_authenticated}")
-    
-    # Check authentication - return JSON instead of redirecting
-    if not request.user.is_authenticated:
-        print("[DEBUG ai_chat] ERROR: User not authenticated")
-        return JsonResponse({'success': False, 'error': 'Authentication required'})
     
     if request.method != 'POST':
         print(f"[DEBUG ai_chat] ERROR: Method is {request.method}, not POST")
