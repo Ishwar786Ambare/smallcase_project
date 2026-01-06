@@ -1,0 +1,11 @@
+{# Using Jinja2 syntax #}
+{% extends "admin/change_list.html" %}
+
+{% block object_tools_items %}
+{{ super() }}
+<li>
+    <a href="{{ url('admin:import_stocks') }}" class="addlink">
+        Import from CSV/Excel
+    </a>
+</li>
+{% endblock %}

@@ -36,6 +36,7 @@ python-decouple==3.8
 yfinance
 pandas
 numpy
+openpyxl  # For Excel file (.xlsx) support
 
 # HTTP requests
 requests

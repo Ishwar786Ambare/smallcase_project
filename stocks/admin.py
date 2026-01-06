@@ -1,7 +1,15 @@
 # stocks/admin.py
 
 from django.contrib import admin
+from django.shortcuts import render, redirect
+from django.urls import path
+from django.contrib import messages
+from django.http import HttpResponseRedirect
 from .models import Stock, Basket, BasketItem
+import pandas as pd
+import yfinance as yf
+from decimal import Decimal
+from datetime import datetime
 
 
 @admin.register(Stock)
@@ -10,6 +18,168 @@ class StockAdmin(admin.ModelAdmin):
     search_fields = ['symbol', 'name']
     list_filter = ['last_updated']
     ordering = ['symbol']
+    
+    # Custom method to add import link message
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        # Add info message with import link
+        from django.utils.safestring import mark_safe
+        messages.info(
+            request, 
+            mark_safe(
+                'To import stocks from CSV/Excel, '
+                '<a href="/admin/stocks/stock/import-stocks/" style="color: #fff; text-decoration: underline;">click here</a>.'
+            )
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+    
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('import-stocks/', self.import_stocks_view, name='import_stocks'),
+        ]
+        return custom_urls + urls
+    
+    def import_stocks_view(self, request):
+        """Handle CSV/Excel file upload for bulk stock import"""
+        if request.method == 'POST':
+            uploaded_file = request.FILES.get('stock_file')
+            exchange = request.POST.get('exchange', 'NSE')  # Default to NSE
+            
+            if not uploaded_file:
+                messages.error(request, "Please select a file to upload.")
+                return redirect('..')
+            
+            try:
+                # Determine file type and read accordingly
+                file_extension = uploaded_file.name.split('.')[-1].lower()
+                
+                if file_extension == 'csv':
+                    df = pd.read_csv(uploaded_file)
+                elif file_extension in ['xlsx', 'xls']:
+                    df = pd.read_excel(uploaded_file)
+                else:
+                    messages.error(request, "Unsupported file format. Please upload CSV or Excel file.")
+                    return redirect('..')
+                
+                # Process the data
+                created_count = 0
+                updated_count = 0
+                failed_count = 0
+                failed_symbols = []
+                
+                # Get the suffix based on exchange
+                suffix = '.NS' if exchange == 'NSE' else '.BO'
+                
+                # Assuming the CSV/Excel has a column named 'symbol' or 'Symbol' or first column
+                if 'symbol' in df.columns:
+                    symbol_column = 'symbol'
+                elif 'Symbol' in df.columns:
+                    symbol_column = 'Symbol'
+                elif 'SYMBOL' in df.columns:
+                    symbol_column = 'SYMBOL'
+                else:
+                    # Use first column if no 'symbol' column found
+                    symbol_column = df.columns[0]
+                
+                for index, row in df.iterrows():
+                    try:
+                        raw_symbol = str(row[symbol_column]).strip()
+                        
+                        # Skip empty rows
+                        if not raw_symbol or raw_symbol.lower() in ['nan', 'none', '']:
+                            continue
+                        
+                        # Add suffix if not already present
+                        if not raw_symbol.endswith('.NS') and not raw_symbol.endswith('.BO'):
+                            symbol = f"{raw_symbol}{suffix}"
+                        else:
+                            symbol = raw_symbol
+                        
+                        # Fetch stock data from yfinance
+                        stock_info = self.fetch_stock_info(symbol)
+                        
+                        if stock_info:
+                            # Create or update stock
+                            stock, created = Stock.objects.update_or_create(
+                                symbol=symbol,
+                                defaults={
+                                    'name': stock_info['name'],
+                                    'current_price': stock_info['price'],
+                                }
+                            )
+                            
+                            if created:
+                                created_count += 1
+                            else:
+                                updated_count += 1
+                        else:
+                            failed_count += 1
+                            failed_symbols.append(raw_symbol)
+                    
+                    except Exception as e:
+                        failed_count += 1
+                        failed_symbols.append(f"{raw_symbol} (Error: {str(e)})")
+                        continue
+                
+                # Show success/error messages
+                if created_count > 0:
+                    messages.success(request, f"Successfully created {created_count} new stocks.")
+                if updated_count > 0:
+                    messages.info(request, f"Updated {updated_count} existing stocks.")
+                if failed_count > 0:
+                    messages.warning(
+                        request, 
+                        f"Failed to import {failed_count} stocks. Failed symbols: {', '.join(failed_symbols[:10])}"
+                        + (" ..." if len(failed_symbols) > 10 else "")
+                    )
+                
+                return redirect('..')
+            
+            except Exception as e:
+                messages.error(request, f"Error processing file: {str(e)}")
+                return redirect('..')
+        
+        # Render the upload form
+        context = {
+            'site_title': 'Import Stocks',
+            'site_header': 'Stock Administration',
+            'has_permission': True,
+        }
+        return render(request, 'admin/csv_form.html', context)
+    
+    def fetch_stock_info(self, symbol):
+        """Fetch stock information from yfinance"""
+        try:
+            stock = yf.Ticker(symbol)
+            info = stock.info
+            
+            # Get current price
+            current_price = None
+            if 'currentPrice' in info:
+                current_price = info['currentPrice']
+            elif 'regularMarketPrice' in info:
+                current_price = info['regularMarketPrice']
+            else:
+                # Try to get from history
+                hist = stock.history(period='1d')
+                if not hist.empty:
+                    current_price = float(hist['Close'].iloc[-1])
+            
+            # Get company name
+            name = info.get('longName') or info.get('shortName') or symbol.split('.')[0]
+            
+            if current_price:
+                return {
+                    'name': name,
+                    'price': Decimal(str(current_price))
+                }
+            else:
+                return None
+        
+        except Exception as e:
+            print(f"Error fetching {symbol}: {e}")
+            return None
 
 
 class BasketItemInline(admin.TabularInline):

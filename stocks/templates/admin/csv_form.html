@@ -1,0 +1,147 @@
+{# Using Jinja2 syntax #}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Import Stocks - Django Admin</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #417690;
+        }
+
+        .import-info {
+            background: #e7f3fe;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #2196F3;
+        }
+
+        .import-notes {
+            margin-top: 30px;
+            padding: 15px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        pre {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        form {
+            margin: 20px 0;
+        }
+
+        .form-row {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="file"],
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        select {
+            width: 400px;
+        }
+
+        .submit-row {
+            margin-top: 20px;
+        }
+
+        input[type="submit"] {
+            background: #417690;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .cancel-link {
+            margin-left: 10px;
+            padding: 10px 20px;
+            text-decoration: none;
+            background: #ccc;
+            color: #333;
+            border-radius: 4px;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <h1>Import Stocks from CSV/Excel</h1>
+
+        <div class="import-info">
+            <h3>Instructions:</h3>
+            <ul>
+                <li>Upload a CSV or Excel file containing stock symbols</li>
+                <li>The file should have a column named <strong>'symbol'</strong> or <strong>'Symbol'</strong> (or use
+                    the first column)</li>
+                <li>Stock details (name, price) will be automatically fetched from Yahoo Finance</li>
+                <li>Select the exchange (NSE or BSE) - the appropriate suffix will be added automatically</li>
+            </ul>
+            <h4>Example CSV format:</h4>
+            <pre>symbol
+RELIANCE
+TCS
+HDFCBANK
+INFY</pre>
+        </div>
+
+        <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+            <div class="form-row">
+                <label for="stock_file">Select CSV/Excel File:</label>
+                <input type="file" name="stock_file" id="stock_file" accept=".csv,.xlsx,.xls" required>
+            </div>
+
+            <div class="form-row">
+                <label for="exchange">Select Exchange:</label>
+                <select name="exchange" id="exchange">
+                    <option value="NSE" selected>NSE (National Stock Exchange) - .NS</option>
+                    <option value="BSE">BSE (Bombay Stock Exchange) - .BO</option>
+                </select>
+            </div>
+
+            <div class="submit-row">
+                <input type="submit" value="Import Stocks" class="default">
+                <a href="{{ url('admin:stocks_stock_changelist') }}" class="cancel-link">Cancel</a>
+            </div>
+        </form>
+
+        <div class="import-notes">
+            <h4>Notes:</h4>
+            <ul>
+                <li>If a stock already exists, its information will be updated</li>
+                <li>Stocks that cannot be fetched from Yahoo Finance will be skipped</li>
+                <li>This process may take a few minutes for large files</li>
+                <li>Make sure you have an active internet connection</li>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>
