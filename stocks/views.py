@@ -964,6 +964,7 @@ def chat_get_groups(request):
                 'members_count': group.get_members_count(),
                 'last_message': last_message.content[:50] if last_message else None,
                 'last_message_time': last_message.created_at.strftime('%H:%M') if last_message else None,
+                'last_message_timestamp': last_message.created_at.timestamp() if last_message else 0,  # For sorting
                 'unread_count': unread_count,
                 'role': membership.role,
                 'is_member': True
@@ -990,10 +991,14 @@ def chat_get_groups(request):
                     'members_count': group.get_members_count(),
                     'last_message': last_message.content[:50] if last_message else None,
                     'last_message_time': last_message.created_at.strftime('%H:%M') if last_message else None,
+                    'last_message_timestamp': last_message.created_at.timestamp() if last_message else 0,  # For sorting
                     'unread_count': unread_count,
                     'role': 'support',  # Special role for support staff
                     'is_member': False  # Not yet a member, but can join
                 })
+        
+        # Sort all groups by last message timestamp (most recent first)
+        groups_data.sort(key=lambda g: g.get('last_message_timestamp', 0), reverse=True)
         
         return JsonResponse({
             'success': True,

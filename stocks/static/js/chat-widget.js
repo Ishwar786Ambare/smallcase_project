@@ -4,7 +4,7 @@
    ======================================== */
 
 
-(function() {
+(function () {
     // State
     let isOpen = false;
     let currentGroupId = null;
@@ -16,7 +16,7 @@
     let typingTimeout = null;
     let displayedMessageIds = new Set();  // Track displayed messages to prevent duplicates
     let isAIOnly = false;  // Track if current chat is AI-only
-    
+
     // DOM Elements
     const container = document.getElementById('chat-widget-container');
     const toggleBtn = document.getElementById('chat-toggle-btn');
@@ -30,12 +30,12 @@
     const unreadBadge = document.getElementById('chat-unread-badge');
     const statusIndicator = document.getElementById('chat-status');
     const typingIndicator = document.getElementById('typing-indicator');
-    
+
     // Panels
     const groupsPanel = document.getElementById('groups-panel');
     const createGroupPanel = document.getElementById('create-group-panel');
     const membersPanel = document.getElementById('members-panel');
-    
+
     // Buttons
     const aiToggleBtn = document.getElementById('ai-toggle-btn');
     const groupsBtn = document.getElementById('chat-groups-btn');
@@ -46,7 +46,7 @@
     const viewMembersBtn = document.getElementById('view-members-btn');
     const leaveGroupBtn = document.getElementById('leave-group-btn');
     const groupActions = document.getElementById('group-actions');
-    
+
     // CSRF Token
     function getCsrfToken() {
         const cookieValue = document.cookie
@@ -55,13 +55,13 @@
             ?.split('=')[1];
         return cookieValue || '';
     }
-    
+
     // Get API URL with language prefix to avoid redirects
     function getApiUrl(path) {
         // Get the current language prefix from the URL path (e.g., /en/, /hi/, /mr/)
         const pathParts = window.location.pathname.split('/');
         const langCode = pathParts[1]; // First part after the domain
-        
+
         // Check if it's a valid language code (2-3 characters)
         if (langCode && langCode.length <= 3 && /^[a-z]+$/i.test(langCode)) {
             // Prepend language prefix to API path
@@ -70,31 +70,31 @@
         // If no language prefix detected, return path as is
         return path;
     }
-    
+
     // WebSocket Connection
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = currentGroupId 
+        const wsUrl = currentGroupId
             ? `${protocol}//${window.location.host}/ws/chat/${currentGroupId}/`
             : `${protocol}//${window.location.host}/ws/chat/`;
-        
+
         socket = new WebSocket(wsUrl);
-        
-        socket.onopen = function(e) {
+
+        socket.onopen = function (e) {
             console.log('WebSocket connected');
             updateStatus('Online', 'online');
             reconnectAttempts = 0;
         };
-        
-        socket.onmessage = function(e) {
+
+        socket.onmessage = function (e) {
             const data = JSON.parse(e.data);
             handleSocketMessage(data);
         };
-        
-        socket.onclose = function(e) {
+
+        socket.onclose = function (e) {
             console.log('WebSocket disconnected');
             updateStatus('Offline', 'offline');
-            
+
             // Attempt to reconnect with exponential backoff
             if (isOpen && reconnectAttempts < 5) {
                 reconnectAttempts++;
@@ -103,19 +103,19 @@
                 setTimeout(connectWebSocket, delay);
             }
         };
-        
-        socket.onerror = function(e) {
+
+        socket.onerror = function (e) {
             console.error('WebSocket error:', e);
             updateStatus('Error', 'offline');
         };
     }
-    
+
     function handleSocketMessage(data) {
-        switch(data.type) {
+        switch (data.type) {
             case 'connection_established':
                 console.log('Connection established:', data.room);
                 break;
-                
+
             case 'new_message':
                 // Only add if it's not our own message (we already added it optimistically)
                 if (!data.message.is_own) {
@@ -127,7 +127,7 @@
                     }
                 }
                 break;
-                
+
             case 'message_sent':
                 // Message was successfully saved - track the real ID
                 if (data.message && data.message.id) {
@@ -139,27 +139,27 @@
                 }
                 console.log('Message sent successfully:', data.message?.id);
                 break;
-                
+
             case 'group_joined':
                 console.log('Joined group:', data.group_id);
                 loadMessages();
                 break;
-                
+
             case 'typing':
                 showTypingIndicator(data.username, data.is_typing);
                 break;
-                
+
             case 'error':
                 console.error('Socket error:', data.message);
                 break;
         }
     }
-    
+
     function updateStatus(text, state) {
         statusIndicator.textContent = text;
         statusIndicator.className = 'status ' + state;
     }
-    
+
     function showTypingIndicator(username, isTyping) {
         if (isTyping) {
             document.getElementById('typing-user').textContent = username;
@@ -168,7 +168,7 @@
             typingIndicator.style.display = 'none';
         }
     }
-    
+
     // Send typing indicator
     function sendTypingIndicator(isTyping) {
         if (socket && socket.readyState === WebSocket.OPEN) {
@@ -179,18 +179,18 @@
             }));
         }
     }
-    
+
     // Show AI typing indicator
     function showAITyping() {
         document.getElementById('typing-user').textContent = 'AI Assistant';
         typingIndicator.style.display = 'block';
     }
-    
+
     // Hide AI typing indicator
     function hideAITyping() {
         typingIndicator.style.display = 'none';
     }
-    
+
     // Toggle Chat
     function toggleChat() {
         isOpen = !isOpen;
@@ -198,7 +198,7 @@
             chatWindow.style.display = 'flex';
             chatIcon.style.display = 'none';
             closeIcon.style.display = 'block';
-            
+
             // Load support chat based on current supportType (default to AI)
             if (!localStorage.getItem('preferredSupportType')) {
                 supportType = 'ai';
@@ -206,10 +206,10 @@
             } else {
                 supportType = localStorage.getItem('preferredSupportType');
             }
-            
+
             // Update toggle button state
             updateToggleButton();
-            
+
             loadMessages();
             setTimeout(() => chatInput.focus(), 100);
         } else {
@@ -223,31 +223,31 @@
             closeAllPanels();
         }
     }
-    
+
     // Load Messages via API (initial load)
     async function loadMessages() {
         try {
-            const url = currentGroupId 
+            const url = currentGroupId
                 ? getApiUrl(`/api/chat/messages/?group_id=${currentGroupId}`)
                 : getApiUrl(`/api/chat/messages/?support_type=${supportType}`);  // Pass support type to backend
-            
+
             const response = await fetch(url);
             const data = await response.json();
-            
+
             if (data.success) {
                 currentGroupId = data.group_id;
                 isAIOnly = data.is_ai_only || false;  // Track if this is an AI-only chat
                 console.log('💬 Loaded chat - Group ID:', currentGroupId, 'AI-only:', isAIOnly, 'Support type:', supportType);
                 updateHeader(data.group_name, data.group_avatar);
-                console.log('data response',data.messages)
+                console.log('data response', data.messages)
                 renderMessages(data.messages);
-                
+
                 // Connect WebSocket after we know the group
                 if (socket) {
                     socket.close();
                 }
                 connectWebSocket();
-                
+
                 // Show group actions for group chats
                 if (currentGroupType === 'group') {
                     groupActions.style.display = 'flex';
@@ -260,32 +260,32 @@
             messagesContainer.innerHTML = '<div class="loading-messages">Failed to load messages</div>';
         }
     }
-    
+
     // Render Messages
     function renderMessages(messages) {
         // Clear the displayed messages tracker for new conversation
         displayedMessageIds.clear();
-        
+
         if (messages.length === 0) {
             messagesContainer.innerHTML = '<div class="message system-message"><p>No messages yet. Start the conversation!</p></div>';
             return;
         }
-        
+
         // Track all message IDs that we're rendering
         messages.forEach(msg => {
             if (msg.id) {
                 displayedMessageIds.add(msg.id);
             }
         });
-        
+
         messagesContainer.innerHTML = messages.map(msg => createMessageHTML(msg)).join('');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
-    
+
     function createMessageHTML(msg) {
         let className = 'message ';
         let badgeHtml = '';
-        
+
         if (msg.message_type === 'system') {
             className += 'system-message';
         } else if (msg.is_own) {
@@ -296,7 +296,7 @@
             // Admin messages have a sender (staff user)
             const isAI = !msg.sender_id || (msg.sender && (msg.sender.includes('AI') || msg.sender.includes('🤖')));
             const isAdmin = msg.sender_id && msg.sender && (msg.sender.includes('Support') || msg.sender.includes('Admin'));
-            
+
             if (isAI) {
                 className += 'ai-message';
                 badgeHtml = '<span class="message-sender-badge ai-badge"><span class="badge-icon">🤖</span> AI Assistant</span>';
@@ -307,12 +307,12 @@
                 className += 'other-message';
             }
         }
-        
+
         let senderHtml = '';
         if (msg.message_type !== 'system' && !msg.is_own && currentGroupType === 'group') {
             senderHtml = `<span class="sender-name">${escapeHtml(msg.sender)}</span>`;
         }
-        
+
         return `
             <div class="${className}" data-id="${msg.id}">
                 ${badgeHtml}
@@ -322,7 +322,7 @@
             </div>
         `;
     }
-    
+
     function addMessageToUI(msg) {
         // Prevent duplicate messages
         const msgId = msg.id || msg.temp_id;
@@ -330,30 +330,30 @@
             console.log('Skipping duplicate message:', msgId);
             return;
         }
-        
+
         if (msgId) {
             displayedMessageIds.add(msgId);
         }
-        
+
         const msgDiv = document.createElement('div');
         msgDiv.innerHTML = createMessageHTML(msg);
         messagesContainer.appendChild(msgDiv.firstElementChild);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
-    
+
     // Send Message via WebSocket
     function sendMessage(content) {
         if (socket && socket.readyState === WebSocket.OPEN) {
             // Generate a temporary ID for optimistic UI update
             const tempId = 'temp_' + Date.now();
-            
+
             socket.send(JSON.stringify({
                 type: 'message',
                 content: content,
                 group_id: currentGroupId,
                 temp_id: tempId  // Send temp ID so server can include it in response
             }));
-            
+
             // Optimistically add message to UI with temp ID
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             addMessageToUI({
@@ -364,7 +364,7 @@
                 message_type: 'text',
                 created_at: time
             });
-            
+
             // ONLY get AI response if this is an AI-only support chat
             console.log('🔍 AI Check - isAIOnly:', isAIOnly, 'supportType:', supportType, 'currentGroupType:', currentGroupType);
             if (isAIOnly && currentGroupType === 'support') {
@@ -380,7 +380,7 @@
             sendMessageHTTP(content);
         }
     }
-    
+
     // Fallback: Send Message via HTTP API
     async function sendMessageHTTP(content) {
         try {
@@ -396,13 +396,13 @@
                     support_type: supportType  // Pass support type so backend knows if AI-only
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 currentGroupId = data.group_id;
                 addMessageToUI(data.message);
-                
+
                 // Get AI response ONLY for AI-only support chats
                 if (isAIOnly && currentGroupType === 'support') {
                     getAIResponse(content);
@@ -412,14 +412,14 @@
             console.error('Error sending message:', error);
         }
     }
-    
+
     // Get AI Response for support chat
     async function getAIResponse(userMessage) {
         console.log('🤖 getAIResponse called with message:', userMessage);
         try {
             // Show AI typing animation
             showAITyping();
-            
+
             console.log('📡 Calling AI chat endpoint...');
             const response = await fetch(getApiUrl('/api/ai/chat/'), {
                 method: 'POST',
@@ -431,14 +431,14 @@
                     message: userMessage
                 })
             });
-            
+
             console.log('📡 Response status:', response.status);
             const data = await response.json();
             console.log('📡 Response data:', data);
-            
+
             // Hide AI typing indicator
             hideAITyping();
-            
+
             if (data.success && data.response) {
                 console.log('✅ AI response received, saving to chat...');
                 // Save AI response as a message
@@ -454,7 +454,7 @@
                         is_ai_response: true
                     })
                 });
-                
+
                 const saveData = await saveResponse.json();
                 console.log('💾 Save response:', saveData);
                 if (saveData.success) {
@@ -478,29 +478,29 @@
             hideAITyping();
         }
     }
-    
+
     // Update Header
     function updateHeader(name, avatar) {
         document.getElementById('chat-group-name').textContent = name || 'Support Team';
         document.getElementById('chat-avatar').textContent = avatar || '👨‍💻';
     }
-    
+
     // Load Groups
     async function loadGroups() {
         try {
             const response = await fetch(getApiUrl('/api/chat/groups/'));
             const data = await response.json();
-            
+
             if (data.success) {
                 const groupsList = document.getElementById('groups-list');
-                
+
                 if (data.groups.length === 0) {
                     groupsList.innerHTML = '<div class="loading-messages">No groups yet. Create one!</div>';
                     return;
                 }
-                
+
                 groupsList.innerHTML = data.groups.map(group => `
-                    <div class="group-item" data-id="${group.id}" data-type="${group.group_type}">
+                    <div class="group-item ${group.unread_count > 0 ? 'has-unread' : ''}" data-id="${group.id}" data-type="${group.group_type}">
                         <div class="group-avatar">${group.avatar}</div>
                         <div class="group-info">
                             <p class="group-name">${escapeHtml(group.name)}</p>
@@ -512,7 +512,7 @@
                         </div>
                     </div>
                 `).join('');
-                
+
                 // Add click handlers
                 groupsList.querySelectorAll('.group-item').forEach(item => {
                     item.addEventListener('click', () => {
@@ -527,7 +527,7 @@
             console.error('Error loading groups:', error);
         }
     }
-    
+
     // Create Group
     async function createGroup(name, description, avatar, memberIds) {
         try {
@@ -544,9 +544,9 @@
                     member_ids: memberIds
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 currentGroupId = data.group.id;
                 currentGroupType = 'group';
@@ -559,19 +559,19 @@
             console.error('Error creating group:', error);
         }
     }
-    
+
     // Load Members
     async function loadMembers() {
         if (!currentGroupId) return;
-        
+
         try {
             const response = await fetch(getApiUrl(`/api/chat/groups/members/?group_id=${currentGroupId}`));
             const data = await response.json();
-            
+
             if (data.success) {
                 document.getElementById('members-group-name').textContent = data.group_name;
                 const membersList = document.getElementById('members-list');
-                
+
                 membersList.innerHTML = data.members.map(member => `
                     <div class="member-item">
                         <div class="member-avatar">${member.username.charAt(0).toUpperCase()}</div>
@@ -582,7 +582,7 @@
                         <span class="member-role">${member.role}</span>
                     </div>
                 `).join('');
-                
+
                 // Show add member section for admins
                 const currentUserMember = data.members.find(m => m.is_current_user);
                 if (currentUserMember && ['admin', 'moderator'].includes(currentUserMember.role)) {
@@ -595,11 +595,11 @@
             console.error('Error loading members:', error);
         }
     }
-    
+
     // Add Member
     async function addMember(email) {
         if (!currentGroupId || !email) return;
-        
+
         try {
             const response = await fetch(getApiUrl('/api/chat/groups/add-member/'), {
                 method: 'POST',
@@ -612,9 +612,9 @@
                     email: email
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 document.getElementById('add-member-email').value = '';
                 loadMembers();
@@ -625,13 +625,13 @@
             console.error('Error adding member:', error);
         }
     }
-    
+
     // Leave Group
     async function leaveGroup() {
         if (!currentGroupId) return;
-        
+
         if (!confirm('Are you sure you want to leave this group?')) return;
-        
+
         try {
             const response = await fetch(getApiUrl('/api/chat/groups/leave/'), {
                 method: 'POST',
@@ -643,9 +643,9 @@
                     group_id: currentGroupId
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 currentGroupId = null;
                 currentGroupType = 'support';
@@ -657,29 +657,29 @@
             console.error('Error leaving group:', error);
         }
     }
-    
+
     // Search Users
     async function searchUsers(query) {
         if (query.length < 2) {
             document.getElementById('search-results').innerHTML = '';
             return;
         }
-        
+
         try {
             const response = await fetch(getApiUrl(`/api/chat/users/search/?q=${encodeURIComponent(query)}`));
             const data = await response.json();
-            
+
             if (data.success) {
                 const resultsDiv = document.getElementById('search-results');
-                
+
                 const filteredUsers = data.users.filter(u => !selectedMembers.some(m => m.id === u.id));
-                
+
                 resultsDiv.innerHTML = filteredUsers.map(user => `
                     <div class="search-result-item" data-id="${user.id}" data-email="${user.email}" data-username="${user.username}">
                         ${escapeHtml(user.username)} (${escapeHtml(user.email)})
                     </div>
                 `).join('');
-                
+
                 resultsDiv.querySelectorAll('.search-result-item').forEach(item => {
                     item.addEventListener('click', () => {
                         const user = {
@@ -698,7 +698,7 @@
             console.error('Error searching users:', error);
         }
     }
-    
+
     // Render Selected Members
     function renderSelectedMembers() {
         const container = document.getElementById('selected-members');
@@ -708,7 +708,7 @@
                 <span class="remove-member" data-id="${m.id}">✕</span>
             </div>
         `).join('');
-        
+
         container.querySelectorAll('.remove-member').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -718,14 +718,14 @@
             });
         });
     }
-    
+
     // Close All Panels
     function closeAllPanels() {
         groupsPanel.style.display = 'none';
         createGroupPanel.style.display = 'none';
         membersPanel.style.display = 'none';
     }
-    
+
     // Update Toggle Button State
     function updateToggleButton() {
         if (supportType === 'admin') {
@@ -734,41 +734,41 @@
             aiToggleBtn.classList.remove('active');
         }
     }
-    
+
     // Toggle Support Type
     function toggleSupportType() {
         console.log('🔄 Toggling support type from:', supportType);
         // Toggle between ai and admin
         supportType = supportType === 'ai' ? 'admin' : 'ai';
         console.log('✅ New support type:', supportType);
-        
+
         localStorage.setItem('preferredSupportType', supportType);
         currentGroupId = null;
         isAIOnly = false;  // Reset AI-only flag when switching
-        
+
         // Update UI
         if (supportType === 'ai') {
             updateHeader('AI Assistant', '🤖');
         } else {
             updateHeader('Human Support', '👨‍💼');
         }
-        
+
         updateToggleButton();
         closeAllPanels();
         loadMessages();
     }
-    
+
     // Escape HTML
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
-    
+
     // Event Listeners
     toggleBtn.addEventListener('click', toggleChat);
     minimizeBtn.addEventListener('click', toggleChat);
-    
+
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const text = chatInput.value.trim();
@@ -778,40 +778,40 @@
             sendTypingIndicator(false);
         }
     });
-    
+
     // Typing indicator on input
     chatInput.addEventListener('input', () => {
         sendTypingIndicator(true);
-        
+
         // Clear previous timeout
         if (typingTimeout) {
             clearTimeout(typingTimeout);
         }
-        
+
         // Stop typing after 2 seconds of no input
         typingTimeout = setTimeout(() => {
             sendTypingIndicator(false);
         }, 2000);
     });
-    
+
     groupsBtn.addEventListener('click', () => {
         closeAllPanels();
         groupsPanel.style.display = 'flex';
         loadGroups();
     });
-    
+
     newGroupBtn.addEventListener('click', () => {
         closeAllPanels();
         createGroupPanel.style.display = 'flex';
         selectedMembers = [];
         renderSelectedMembers();
     });
-    
+
     closeGroupsPanel.addEventListener('click', () => {
         groupsPanel.style.display = 'none';
     });
-    
-    
+
+
     // Toggle Support Type Event Listener
     aiToggleBtn.addEventListener('click', toggleSupportType);
 
@@ -819,38 +819,38 @@
     closeCreatePanel.addEventListener('click', () => {
         createGroupPanel.style.display = 'none';
     });
-    
+
     closeMembersPanel.addEventListener('click', () => {
         membersPanel.style.display = 'none';
     });
-    
+
     viewMembersBtn.addEventListener('click', () => {
         closeAllPanels();
         membersPanel.style.display = 'flex';
         loadMembers();
     });
-    
+
     leaveGroupBtn.addEventListener('click', leaveGroup);
-    
+
     document.getElementById('add-member-btn').addEventListener('click', () => {
         const email = document.getElementById('add-member-email').value.trim();
         if (email) {
             addMember(email);
         }
     });
-    
+
     document.getElementById('create-group-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const name = document.getElementById('new-group-name').value.trim();
         const description = document.getElementById('new-group-description').value.trim();
         const avatar = document.getElementById('new-group-avatar').value;
         const memberIds = selectedMembers.map(m => m.id);
-        
+
         if (name) {
             createGroup(name, description, avatar, memberIds);
         }
     });
-    
+
     document.getElementById('member-search').addEventListener('input', (e) => {
         searchUsers(e.target.value);
     });
