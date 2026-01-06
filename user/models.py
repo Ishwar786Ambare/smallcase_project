@@ -63,3 +63,134 @@ class User(AbstractUser):
     class Meta:
         verbose_name = 'User'
         verbose_name_plural = 'Users'
+
+
+class ContactMessage(models.Model):
+    """
+    Model to store contact form submissions
+    Tracks all user inquiries with status and metadata
+    """
+    
+    # Status choices
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('read', 'Read'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('spam', 'Spam'),
+    ]
+    
+    # Contact information
+    name = models.CharField(
+        max_length=100,
+        help_text="Name of the person contacting"
+    )
+    email = models.EmailField(
+        max_length=254,
+        help_text="Email address for response"
+    )
+    subject = models.CharField(
+        max_length=200,
+        help_text="Subject of the inquiry"
+    )
+    message = models.TextField(
+        help_text="Message content"
+    )
+    
+    # Status tracking
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='new',
+        db_index=True,
+        help_text="Current status of the inquiry"
+    )
+    
+    # Optional: Link to user if logged in
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='contact_messages',
+        help_text="User who submitted the form (if authenticated)"
+    )
+    
+    # Metadata
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="IP address of the submitter"
+    )
+    user_agent = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Browser user agent string"
+    )
+    
+    # Admin notes
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Internal notes by staff (not visible to user)"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the message was submitted"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Last time the message was updated"
+    )
+    replied_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the inquiry was replied to"
+    )
+    
+    class Meta:
+        verbose_name = 'Contact Message'
+        verbose_name_plural = 'Contact Messages'
+        ordering = ['-created_at']  # Most recent first
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['email']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.subject} ({self.get_status_display()})"
+    
+    def mark_as_read(self):
+        """Mark message as read"""
+        if self.status == 'new':
+            self.status = 'read'
+            self.save(update_fields=['status', 'updated_at'])
+    
+    def mark_as_resolved(self):
+        """Mark message as resolved"""
+        from django.utils import timezone
+        self.status = 'resolved'
+        if not self.replied_at:
+            self.replied_at = timezone.now()
+        self.save(update_fields=['status', 'replied_at', 'updated_at'])
+    
+    def mark_as_spam(self):
+        """Mark message as spam"""
+        self.status = 'spam'
+        self.save(update_fields=['status', 'updated_at'])
+    
+    @property
+    def is_new(self):
+        """Check if message is new/unread"""
+        return self.status == 'new'
+    
+    @property
+    def short_message(self):
+        """Return truncated message for list views"""
+        if len(self.message) > 100:
+            return self.message[:100] + '...'
+        return self.message
+

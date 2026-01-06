@@ -19,12 +19,12 @@
     .contact-header h1 {
         font-size: 2.5em;
         margin-bottom: 10px;
-        color: white;
+        color: var(--text-color, #5882acff);
         text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .contact-header p {
-        color: rgba(255, 255, 255, 0.9);
+        color: var(--text-color, #5882acff);
         font-size: 1.1em;
     }
 
@@ -146,6 +146,109 @@
         box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
     }
 
+    .btn-send:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Error message styles */
+    .error-message {
+        color: #dc2626;
+        font-size: 0.875em;
+        margin-top: 6px;
+        min-height: 20px;
+        display: block;
+        font-weight: 500;
+    }
+
+    .form-group input.error,
+    .form-group textarea.error {
+        border-color: #dc2626;
+        background-color: rgba(220, 38, 38, 0.05);
+    }
+
+    .form-group input.success,
+    .form-group textarea.success {
+        border-color: #16a34a;
+        background-color: rgba(22, 163, 74, 0.05);
+    }
+
+    /* Required field indicator */
+    .required {
+        color: #dc2626;
+        font-weight: bold;
+        margin-left: 2px;
+    }
+
+    /* Alert messages */
+    .form-alert {
+        padding: 16px 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideDown 0.3s ease;
+    }
+
+    .form-alert.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .form-alert.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading state */
+    .btn-loading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .spinner {
+        animation: rotate 1s linear infinite;
+    }
+
+    .spinner circle {
+        animation: dash 1.5s ease-in-out infinite;
+    }
+
+    @keyframes rotate {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes dash {
+        0% {
+            stroke-dashoffset: 0;
+        }
+        50% {
+            stroke-dashoffset: -40;
+        }
+        100% {
+            stroke-dashoffset: -80;
+        }
+    }
+
     @media (max-width: 768px) {
         .contact-content {
             grid-template-columns: 1fr;
@@ -206,29 +309,51 @@
         </div>
 
         <div class="contact-form">
-            <form method="POST">
+            <!-- Success/Error Alert (initially hidden) -->
+            <div id="formAlert" class="form-alert" style="display: none;"></div>
+            
+            <form id="contactForm" method="POST" data-submit-url="{{ url('user:contact_submit') }}" novalidate>
                 <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                 
                 <div class="form-group">
-                    <label for="name">Your Name</label>
-                    <input type="text" id="name" name="name" placeholder="John Doe" required>
+                    <label for="name">Your Name <span class="required">*</span></label>
+                    {{ form.name }}
+                    <div class="error-message" id="name-error"></div>
                 </div>
 
                 <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="john@example.com" required>
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    {{ form.email }}
+                    <div class="error-message" id="email-error"></div>
                 </div>
 
                 <div class="form-group">
-                    <label for="message">Message</label>
-                    <textarea id="message" name="message" placeholder="How can we help you?" required></textarea>
+                    <label for="subject">Subject <span class="required">*</span></label>
+                    {{ form.subject }}
+                    <div class="error-message" id="subject-error"></div>
                 </div>
 
-                <button type="submit" class="btn-send">Send Message</button>
+                <div class="form-group">
+                    <label for="message">Message <span class="required">*</span></label>
+                    {{ form.message }}
+                    <div class="error-message" id="message-error"></div>
+                </div>
+
+                <button type="submit" class="btn-send" id="submitBtn">
+                    <span class="btn-text">Send Message</span>
+                    <span class="btn-loading" style="display: none;">
+                        <svg class="spinner" width="20" height="20" viewBox="0 0 50 50">
+                            <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="80" stroke-dashoffset="60"></circle>
+                        </svg>
+                        Sending...
+                    </span>
+                </button>
             </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
+{% block javascript %}
 <script src="{{ static('js/pages/contact.js') }}"></script>
+{% endblock %}

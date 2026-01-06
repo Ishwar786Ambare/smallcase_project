@@ -698,20 +698,15 @@ def contact_us(request):
     from django.shortcuts import render
     from django.middleware.csrf import get_token
     from django.contrib import messages
+    from user.forms import ContactForm
     
-    if request.method == 'POST':
-        name = request.POST.get('name')
-        email = request.POST.get('email')
-        message = request.POST.get('message')
-        
-        if name and email and message:
-            # Here you would typically send an email
-            messages.success(request, 'Thank you for your message! We will get back to you soon.')
-            return redirect('contact_us')
-        else:
-            messages.error(request, 'Please fill in all fields.')
+    # Create form instance (empty form for GET, bound form for POST)
+    form = ContactForm(request.POST if request.method == 'POST' else None)
     
-    context = {'csrf_token': get_token(request)}
+    context = {
+        'csrf_token': get_token(request),
+        'form': form
+    }
     return render(request, 'stocks/contact.j2', context)
 
 

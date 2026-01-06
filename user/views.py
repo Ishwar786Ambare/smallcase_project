@@ -107,3 +107,88 @@ def logout_view(request):
     logout(request)
     messages.success(request, 'You have been logged out successfully')
     return redirect('user:login')
+
+
+def contact_form_submit(request):
+    """
+    Handle contact form submission via AJAX
+    Returns JSON response with validation errors or success message
+    """
+    from django.http import JsonResponse
+    from django.views.decorators.http import require_http_methods
+    from .forms import ContactForm
+    from .models import ContactMessage
+
+    if request.method == 'POST':
+        # Check if it's an AJAX request
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        # Use POST data (form sends URL-encoded data, not JSON)
+        form = ContactForm(request.POST)
+        
+        if form.is_valid():
+            # Save using ModelForm's save method which automatically handles metadata
+            # The form's save() method will extract IP, user agent, and user from request
+            contact_message = form.save(commit=True, request=request)
+            
+            # Get cleaned data for response
+            name = contact_message.name
+            email = contact_message.email
+            subject = contact_message.subject
+            
+            # TODO: Send email notification
+            # Example using Django's send_mail:
+            # from django.core.mail import send_mail
+            # from django.conf import settings
+            # send_mail(
+            #     subject=f"New Contact Form: {subject}",
+            #     message=f"From: {name} ({email})\n\n{contact_message.message}\n\n---\nMessage ID: {contact_message.id}\nSubmitted at: {contact_message.created_at}",
+            #     from_email=settings.DEFAULT_FROM_EMAIL,
+            #     recipient_list=['support@stockbasket.com'],
+            #     fail_silently=False,
+            # )
+            
+            if is_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Thank you for your message! We will get back to you soon.',
+                    'data': {
+                        'id': contact_message.id,
+                        'name': name,
+                        'email': email,
+                        'subject': subject,
+                        'submitted_at': contact_message.created_at.isoformat()
+                    }
+                })
+            else:
+                messages.success(request, 'Thank you for your message! We will get back to you soon.')
+                return redirect('contact_us')
+        else:
+            # Form has validation errors
+            if is_ajax:
+                # Return field-specific errors for AJAX
+                errors = {}
+                for field, error_list in form.errors.items():
+                    errors[field] = [str(error) for error in error_list]
+                
+                return JsonResponse({
+                    'success': False,
+                    'errors': errors,
+                    'message': 'Please correct the errors below'
+                }, status=400)
+            else:
+                # Regular form submission
+                messages.error(request, 'Please correct the errors below')
+                context = {
+                    'csrf_token': get_token(request),
+                    'form': form
+                }
+                return render(request, 'stocks/contact.j2', context)
+    
+    # GET request
+    return JsonResponse({
+        'success': False,
+        'message': 'Method not allowed'
+    }, status=405)
+
+
