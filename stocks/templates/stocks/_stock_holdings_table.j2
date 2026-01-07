@@ -1,0 +1,108 @@
+<h2 class="section-title">Stock Holdings ({{ items|length }} stocks)</h2>
+
+<table class="stocks-table">
+    <thead>
+        <tr>
+            <th>Stock</th>
+            <th>Weight %</th>
+            <th>Quantity</th>
+            <th>Purchase Price</th>
+            <th>Current Price</th>
+            <th>Invested Amount</th>
+            <th>Current Value</th>
+            <th>P/L</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% set total = namespace(qty=0, invested=0) %}
+        {% for item in items %}
+        {% set total.qty = total.qty + item.quantity %}
+        {% set total.invested = total.invested + item.allocated_amount %}
+        <tr data-item-id="{{ item.id }}">
+            <td>
+                <strong>{{ item.stock.symbol }}</strong><br>
+                <small style="color: #666;">{{ item.stock.name }}</small>
+            </td>
+            <td class="editable-cell weight-cell">
+                <div class="display-mode">
+                    <span class="display-value" onclick="enableEdit({{ item.id }}, 'weight')">
+                        <span class="weight-value">{{ item.weight_percentage }}</span>%
+                        <span class="edit-icon">✏️</span>
+                    </span>
+                </div>
+                <div class="edit-mode" style="display: none;">
+                    <input type="number" step="0.01" class="edit-input weight-input" 
+                           value="{{ item.weight_percentage }}" min="0.01" max="100">
+                    <div class="edit-actions">
+                        <button class="btn btn-success btn-small" onclick="saveEdit({{ item.id }}, 'weight')">✓</button>
+                        <button class="btn btn-secondary btn-small" onclick="cancelEdit({{ item.id }}, 'weight')">✗</button>
+                    </div>
+                </div>
+            </td>
+            <td class="editable-cell quantity-cell">
+                <div class="display-mode">
+                    <span class="display-value" onclick="enableEdit({{ item.id }}, 'quantity')">
+                        <span class="quantity-value">{{ item.quantity|int }}</span>
+                        <span class="edit-icon">✏️</span>
+                    </span>
+                </div>
+                <div class="edit-mode" style="display: none;">
+                    <input type="number" step="1" class="edit-input quantity-input" 
+                           value="{{ item.quantity|int }}" min="1">
+                    <div class="edit-actions">
+                        <button class="btn btn-success btn-small" onclick="saveEdit({{ item.id }}, 'quantity')">✓</button>
+                        <button class="btn btn-secondary btn-small" onclick="cancelEdit({{ item.id }}, 'quantity')">✗</button>
+                    </div>
+                </div>
+            </td>
+            <td>₹{{ item.purchase_price }}</td>
+            <td>
+                {% if item.stock.current_price %}
+                    ₹{{ item.stock.current_price|round(2) }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </td>
+            <td class="allocated-amount">₹{{ item.allocated_amount }}</td>
+            <td class="current-value">₹{{ item.get_current_value()|round(2) }}</td>
+            <td class="profit-loss {% if item.get_profit_loss() >= 0 %}positive{% else %}negative{% endif %}">
+                ₹{{ item.get_profit_loss()|round(2) }}
+            </td>
+            <td>
+                <button class="btn btn-danger btn-small" 
+                        onclick="deleteStock({{ basket.id }}, {{ item.stock.id }}, {{ item.id }}, '{{ url('basket_stock_delete', args=[basket.id, item.stock.id ]) }}')"
+                        title="Remove stock from basket"
+                        id="basket-item-delete-stock-id-{{ item.id }}"
+                        >
+                    🗑️  
+                </button>       
+            </td>
+        </tr>
+        {% endfor %}
+        <tr style="font-weight: 600; background-color: var(--table-hover); border-top: 2px solid var(--border-color);">
+            <td>Total of all</td>
+            <td>100%</td>
+            <td>{{ total.qty|int }}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>₹{{ total.invested|round(2) }}</td>
+            <td>₹{{ total_current_value|round(2) }}</td>
+            <td class="{% if total_profit_loss >= 0 %}positive{% else %}negative{% endif %}">
+                ₹{{ total_profit_loss|round(2) }}
+            </td>
+            <td>-</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="note-box">
+    <p>
+        <strong>Note:</strong> Stock prices are fetched from Yahoo Finance and may have a slight delay.
+        Click on the weight or quantity values to edit them. When you change one, the other will automatically adjust.
+        Created on: {{ basket.created_at.strftime('%d %b %Y %H:%M') }}
+    </p>
+</div>
+
+
+

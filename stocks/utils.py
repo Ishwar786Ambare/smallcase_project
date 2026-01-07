@@ -441,3 +441,171 @@ def create_basket_with_stocks(name, description, investment_amount, stock_symbol
             item.save()
 
     return basket
+
+
+def remove_stock_from_basket(basket_id, stock_id):
+    """
+    Remove a stock from a basket and recalculate all values
+    
+    IMPORTANT: This only removes the BasketItem relationship. The Stock object 
+    itself remains in the database and can still be used by other baskets.
+    
+    This function removes a specific stock from a basket and automatically:
+    - Removes the BasketItem entry
+    - Recalculates the total investment amount
+    - Redistributes weight percentages equally among remaining stocks
+    - Updates allocated amounts for remaining stocks
+    
+    Args:
+        basket_id: ID of the basket
+        stock_id: ID of the stock to remove
+    
+    Returns:
+        Dictionary with:
+            - success: Boolean indicating if deletion was successful
+            - message: Success or error message
+            - basket: Updated basket object (if successful)
+            - deleted_amount: Amount that was removed from basket
+    """
+    from .models import Basket, BasketItem
+    
+    try:
+        # Get the basket
+        basket = Basket.objects.get(id=basket_id)
+        
+        # Get the basket item to delete
+        basket_item = BasketItem.objects.get(basket=basket, stock_id=stock_id)
+        
+        # Store the allocated amount before removal
+        deleted_amount = basket_item.allocated_amount
+        deleted_stock_name = basket_item.stock.name
+        
+        # Remove the basket item (only the relationship, not the Stock object)
+        basket_item.delete()
+        
+        # Get remaining items
+        remaining_items = basket.items.all()
+        
+        if remaining_items.count() == 0:
+            # If no items left, set investment amount to 0
+            basket.investment_amount = Decimal('0')
+            basket.save()
+            
+            return {
+                'success': True,
+                'message': f'Successfully removed {deleted_stock_name}. Basket is now empty.',
+                'basket': basket,
+                'deleted_amount': float(deleted_amount),
+                'remaining_stocks': 0
+            }
+        
+        # Recalculate total investment amount (sum of remaining allocated amounts)
+        total_allocated = sum(item.allocated_amount for item in remaining_items)
+        
+        # Update basket investment amount
+        basket.investment_amount = total_allocated
+        basket.save()
+        
+        # Recalculate weight percentages for remaining stocks
+        # Equal weight distribution
+        num_remaining = remaining_items.count()
+        equal_weight = Decimal('100.00') / num_remaining
+        
+        for item in remaining_items:
+            # Update weight percentage to equal distribution
+            item.weight_percentage = (item.allocated_amount / total_allocated) * 100
+            item.save()
+        
+        return {
+            'success': True,
+            'message': f'Successfully removed {deleted_stock_name} from basket. Investment amount reduced by ₹{deleted_amount:.2f}.',
+            'basket': basket,
+            'deleted_amount': float(deleted_amount),
+            'remaining_stocks': num_remaining,
+            'new_investment_amount': float(total_allocated)
+        }
+        
+    except Basket.DoesNotExist:
+        return {
+            'success': False,
+            'message': f'Basket with ID {basket_id} not found.',
+            'basket': None,
+            'deleted_amount': 0
+        }
+    
+    except BasketItem.DoesNotExist:
+        return {
+            'success': False,
+            'message': f'Stock not found in this basket.',
+            'basket': None,
+            'deleted_amount': 0
+        }
+    
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'Error removing stock from basket: {str(e)}',
+            'basket': None,
+            'deleted_amount': 0
+        }
+
+
+def recalculate_basket_weights(basket_id):
+    """
+    Recalculate weight percentages for all stocks in a basket
+    
+    This ensures all weights sum to 100% based on current allocated amounts
+    
+    Args:
+        basket_id: ID of the basket to recalculate
+    
+    Returns:
+        Dictionary with success status and message
+    """
+    from .models import Basket
+    
+    try:
+        basket = Basket.objects.get(id=basket_id)
+        items = basket.items.all()
+        
+        if items.count() == 0:
+            return {
+                'success': True,
+                'message': 'Basket is empty, nothing to recalculate.'
+            }
+        
+        # Calculate total allocated amount
+        total_allocated = sum(item.allocated_amount for item in items)
+        
+        if total_allocated == 0:
+            return {
+                'success': False,
+                'message': 'Total allocated amount is zero, cannot recalculate weights.'
+            }
+        
+        # Update each item's weight percentage
+        for item in items:
+            item.weight_percentage = (item.allocated_amount / total_allocated) * 100
+            item.save()
+        
+        # Update basket investment amount
+        basket.investment_amount = total_allocated
+        basket.save()
+        
+        return {
+            'success': True,
+            'message': f'Successfully recalculated weights for {items.count()} stocks.',
+            'total_investment': float(total_allocated)
+        }
+        
+    except Basket.DoesNotExist:
+        return {
+            'success': False,
+            'message': f'Basket with ID {basket_id} not found.'
+        }
+    
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'Error recalculating basket weights: {str(e)}'
+        }

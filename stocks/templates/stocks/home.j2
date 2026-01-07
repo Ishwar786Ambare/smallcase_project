@@ -430,7 +430,7 @@
                         <td><strong>{{ stock.symbol }}</strong></td>
                         <td>{{ stock.name }}</td>
                         <td>₹{{ stock.current_price }}</td>
-                        <td>{{ stock.last_updated }}</td>
+                        <td>{{ stock.last_updated.strftime('%d %b %Y %H:%M') }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

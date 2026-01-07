@@ -171,6 +171,8 @@ def basket_create(request):
 @login_required
 def basket_detail(request, basket_id):
     """View basket details"""
+    from django.template.loader import get_template
+    
     basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     # OPTIMIZATION: Use select_related to avoid N+1 queries
     items = basket.items.select_related('stock').all()
@@ -207,9 +209,24 @@ def basket_detail(request, basket_id):
         }
         cache.set(cache_key, metrics, 300)  # Cache for 5 minutes
     
+    # Load the stock holdings table template partial
+    stock_holdings_template = get_template("stocks/_stock_holdings_table.j2")
+    
+    # Prepare context for the partial template
+    holdings_context = {
+        'basket': basket,
+        'items': items,
+        'total_current_value': metrics['total_current_value'],
+        'total_profit_loss': metrics['total_profit_loss'],
+    }
+    
+    # Render the stock holdings table HTML
+    stock_holdings_html = stock_holdings_template.render(holdings_context)
+    
     context = {
         'basket': basket,
         'items': items,
+        'stock_holdings_html': stock_holdings_html,  # Pass rendered HTML to main template
         **metrics
     }
     return render(request, 'stocks/basket_detail.j2', context)
@@ -614,6 +631,67 @@ def basket_item_edit(request, item_id):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+from django.views.decorators.csrf import csrf_exempt
+# @login_required
+@csrf_exempt
+def basket_stock_delete(request, basket_id, stock_id):
+    """Delete a stock from basket and return updated HTML"""
+    from django.http import JsonResponse
+    from django.template.loader import get_template
+    from .utils import remove_stock_from_basket
+    print(request.method)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+        
+    # Verify basket ownership and existence
+    basket = get_object_or_404(Basket, id=basket_id, user=request.user)
+    
+    # Use the utility function to remove the stock and recalculate everything
+    result = remove_stock_from_basket(basket_id, stock_id)
+    
+    if not result['success']:
+        return JsonResponse(result)
+        
+    # Refresh basket metrics
+    # Clear caches
+    cache.delete_many([
+        f'basket_value_{basket.id}*',
+        f'basket_metrics_{basket.id}*',
+        f'chart_data_{basket.id}*',
+        f'performance_{basket.id}'
+    ])
+    
+    # Get updated items for rendering
+    items = basket.items.select_related('stock').all()
+    
+    total_current_value = basket.get_total_value()
+    total_profit_loss = basket.get_profit_loss()
+    profit_loss_percentage = basket.get_profit_loss_percentage()
+    
+    # Render the updated stock holdings table
+    stock_holdings_template = get_template("stocks/_stock_holdings_table.j2")
+    
+    holdings_context = {
+        'basket': basket,
+        'items': items,
+        'total_current_value': total_current_value,
+        'total_profit_loss': total_profit_loss,
+    }
+    
+    stock_holdings_html = stock_holdings_template.render(holdings_context)
+    
+    # Return JSON response with new HTML and metrics
+    return JsonResponse({
+        'success': True,
+        'message': result['message'],
+        'stock_holdings_html': stock_holdings_html,
+        'new_investment_amount': float(basket.investment_amount),
+        'total_current_value': total_current_value,
+        'total_profit_loss': total_profit_loss,
+        'profit_loss_percentage': profit_loss_percentage
+    })
 
 
 @login_required
