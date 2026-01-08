@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',  # Django Channels for real-time WebSocket messaging
     'corsheaders',
+    'import_export',  # Django Import-Export for admin data import/export
     'user',  # User authentication app
     'stocks',  # Stock basket management app
 ]

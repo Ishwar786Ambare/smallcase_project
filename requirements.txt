@@ -38,6 +38,9 @@ pandas
 numpy
 openpyxl  # For Excel file (.xlsx) support
 
+# Django Import-Export for admin data import/export
+django-import-export==4.3.1
+
 # HTTP requests
 requests
 beautifulsoup4

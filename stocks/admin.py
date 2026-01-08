@@ -5,7 +5,14 @@ from django.shortcuts import render, redirect
 from django.urls import path
 from django.contrib import messages
 from django.http import HttpResponseRedirect
+from import_export.admin import ImportExportModelAdmin, ExportActionMixin
+from import_export.formats.base_formats import CSV, XLSX, JSON, HTML, DEFAULT_FORMATS
 from .models import Stock, Basket, BasketItem
+from .resources import (
+    StockResource, BasketResource, BasketItemResource,
+    ChatGroupResource, ChatGroupMemberResource, ChatMessageResource,
+    TinyURLResource
+)
 import pandas as pd
 import yfinance as yf
 from decimal import Decimal
@@ -13,27 +20,49 @@ from datetime import datetime
 
 
 @admin.register(Stock)
-class StockAdmin(admin.ModelAdmin):
+class StockAdmin(ImportExportModelAdmin):
+    """
+    Stock admin with TWO import methods:
+    1. Django Import-Export (NEW) - Click "Import" button - Supports CSV, XLSX, JSON
+    2. Custom CSV Import (OLD) - Legacy system available at /admin/stocks/stock/import-stocks/
+    """
+    resource_class = StockResource
     list_display = ['symbol', 'name', 'current_price', 'last_updated']
     search_fields = ['symbol', 'name']
     list_filter = ['last_updated']
     ordering = ['symbol']
     
-    # Custom method to add import link message
+    # Import/Export settings (NEW django-import-export)
+    import_template_name = 'admin/import_export/import.html'
+    export_template_name = 'admin/import_export/export.html'
+    
+    # Customize import/export formats
+    # formats = [
+    #     CSV,
+    #     XLSX,
+    #     JSON,
+    #     HTML,
+    # ]
+
+    format =  DEFAULT_FORMATS
+    
+    # OLD custom import system - Keep for backward compatibility
     def changelist_view(self, request, extra_context=None):
+        """Add message showing custom import link"""
         extra_context = extra_context or {}
-        # Add info message with import link
         from django.utils.safestring import mark_safe
         messages.info(
             request, 
             mark_safe(
-                'To import stocks from CSV/Excel, '
-                '<a href="/admin/stocks/stock/import-stocks/" style="color: #fff; text-decoration: underline;">click here</a>.'
+                '💡 Two import options available: '
+                '1) Click "Import" button above (recommended) '
+                '2) <a href="/admin/stocks/stock/import-stocks/" style="color: #fff; text-decoration: underline;">Legacy CSV Import</a>'
             )
         )
         return super().changelist_view(request, extra_context=extra_context)
     
     def get_urls(self):
+        """Add custom URL for legacy CSV import"""
         urls = super().get_urls()
         custom_urls = [
             path('import-stocks/', self.import_stocks_view, name='import_stocks'),
@@ -41,7 +70,10 @@ class StockAdmin(admin.ModelAdmin):
         return custom_urls + urls
     
     def import_stocks_view(self, request):
-        """Handle CSV/Excel file upload for bulk stock import"""
+        """
+        Legacy custom CSV/Excel upload handler (OLD SYSTEM)
+        Kept for backward compatibility
+        """
         if request.method == 'POST':
             uploaded_file = request.FILES.get('stock_file')
             exchange = request.POST.get('exchange', 'NSE')  # Default to NSE
@@ -142,14 +174,14 @@ class StockAdmin(admin.ModelAdmin):
         
         # Render the upload form
         context = {
-            'site_title': 'Import Stocks',
+            'site_title': 'Legacy CSV Import',
             'site_header': 'Stock Administration',
             'has_permission': True,
         }
         return render(request, 'admin/csv_form.html', context)
     
     def fetch_stock_info(self, symbol):
-        """Fetch stock information from yfinance"""
+        """Fetch stock information from yfinance (used by legacy import)"""
         try:
             stock = yf.Ticker(symbol)
             info = stock.info
@@ -182,6 +214,7 @@ class StockAdmin(admin.ModelAdmin):
             return None
 
 
+
 class BasketItemInline(admin.TabularInline):
     model = BasketItem
     extra = 0
@@ -189,7 +222,9 @@ class BasketItemInline(admin.TabularInline):
 
 
 @admin.register(Basket)
-class BasketAdmin(admin.ModelAdmin):
+class BasketAdmin(ImportExportModelAdmin):
+    """Basket admin with import/export functionality."""
+    resource_class = BasketResource
     list_display = ['name', 'user', 'investment_amount', 'created_at', 'get_current_value', 'get_profit_loss']
     search_fields = ['name', 'description', 'user__email']
     list_filter = ['created_at', 'user']
@@ -209,7 +244,9 @@ class BasketAdmin(admin.ModelAdmin):
 
 
 @admin.register(BasketItem)
-class BasketItemAdmin(admin.ModelAdmin):
+class BasketItemAdmin(ImportExportModelAdmin):
+    """BasketItem admin with import/export functionality."""
+    resource_class = BasketItemResource
     list_display = ['basket', 'stock', 'weight_percentage', 'allocated_amount', 'quantity', 'purchase_price']
     list_filter = ['basket', 'purchase_date']
     search_fields = ['basket__name', 'stock__symbol']
@@ -241,7 +278,9 @@ class ChatMessageInline(admin.TabularInline):
 
 
 @admin.register(ChatGroup)
-class ChatGroupAdmin(admin.ModelAdmin):
+class ChatGroupAdmin(ImportExportModelAdmin):
+    """ChatGroup admin with import/export functionality."""
+    resource_class = ChatGroupResource
     list_display = ['name', 'group_type', 'created_by', 'get_members_count', 'is_active', 'created_at']
     list_filter = ['group_type', 'is_active', 'created_at']
     search_fields = ['name', 'description', 'created_by__email']
@@ -256,7 +295,9 @@ class ChatGroupAdmin(admin.ModelAdmin):
 
 
 @admin.register(ChatGroupMember)
-class ChatGroupMemberAdmin(admin.ModelAdmin):
+class ChatGroupMemberAdmin(ImportExportModelAdmin):
+    """ChatGroupMember admin with import/export functionality."""
+    resource_class = ChatGroupMemberResource
     list_display = ['user', 'group', 'role', 'is_active', 'notifications_enabled', 'joined_at']
     list_filter = ['role', 'is_active', 'notifications_enabled', 'joined_at']
     search_fields = ['user__email', 'group__name']
@@ -265,7 +306,9 @@ class ChatGroupMemberAdmin(admin.ModelAdmin):
 
 
 @admin.register(ChatMessage)
-class ChatMessageAdmin(admin.ModelAdmin):
+class ChatMessageAdmin(ImportExportModelAdmin):
+    """ChatMessage admin with import/export functionality."""
+    resource_class = ChatMessageResource
     list_display = ['get_short_content', 'group', 'sender', 'message_type', 'is_read', 'created_at']
     list_filter = ['message_type', 'is_read', 'is_deleted', 'created_at']
     search_fields = ['content', 'sender__email', 'group__name']
@@ -287,7 +330,9 @@ from .models import TinyURL
 
 
 @admin.register(TinyURL)
-class TinyURLAdmin(admin.ModelAdmin):
+class TinyURLAdmin(ImportExportModelAdmin):
+    """TinyURL admin with import/export functionality."""
+    resource_class = TinyURLResource
     list_display = ['short_code', 'get_basket_name', 'click_count', 'is_active', 'created_by', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['short_code', 'original_url', 'basket__name', 'created_by__email']
