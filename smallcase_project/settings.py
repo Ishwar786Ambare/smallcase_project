@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',  # Django Channels for real-time WebSocket messaging
     'corsheaders',
+    'django_htmx',  # Django HTMX integration
     'import_export',  # Django Import-Export for admin data import/export
     'user',  # User authentication app
     'stocks',  # Stock basket management app
@@ -68,6 +69,7 @@ MIDDLEWARE = [
     'django.middleware.locale.LocaleMiddleware',  # Language detection middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',  # HTMX middleware for request.htmx
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

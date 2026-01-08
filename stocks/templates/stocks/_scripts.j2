@@ -1,2 +1,18 @@
+<!-- HTMX for dynamic interactions -->
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+<!-- Configure HTMX to send CSRF token -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Configure HTMX to include CSRF token from meta tag
+        document.body.addEventListener('htmx:configRequest', function(event) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                event.detail.headers['X-CSRFToken'] = csrfToken;
+            }
+        });
+    });
+</script>
+
 <!-- Core JavaScript - Theme Toggle, Alerts, and Common Utilities -->
-<script src="{{ static('js/common.js') }}"></script>
+<script src="{{ static('js/common.js') }}" defer></script>

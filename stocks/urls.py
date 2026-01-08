@@ -20,6 +20,8 @@ urlpatterns = [
     path('basket/preview/', views.preview_basket, name='preview_basket'),
     path('basket-item/<int:item_id>/edit/', views.basket_item_edit, name='basket_item_edit'),
     path('basket/<int:basket_id>/stock/<int:stock_id>/delete/', views.basket_stock_delete, name='basket_stock_delete'),
+    path('basket/<int:basket_id>/stock/add/', views.basket_stock_add, name='basket_stock_add'),
+    path('basket/<int:basket_id>/available-stocks/', views.basket_get_available_stocks, name='basket_available_stocks'),
     
     # Static pages
     path('contact/', views.contact_us, name='contact_us'),

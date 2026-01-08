@@ -1,0 +1,76 @@
+<style>
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: inline;
+    }
+    .htmx-request.htmx-indicator {
+        display: inline;
+    }
+    .stock-add-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+</style>
+
+{% if stocks|length == 0 %}
+    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+        No stocks available to add
+    </div>
+{% else %}
+    {% for stock in stocks %}
+    <div class="stock-item" data-symbol="{{ stock.symbol|lower }}" data-name="{{ stock.name|lower }}" 
+        style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 8px; background: var(--container-bg); transition: all 0.2s;"
+        onmouseover="this.style.background='var(--table-hover)'; this.style.borderColor='var(--primary-color)'"
+        onmouseout="this.style.background='var(--container-bg)'; this.style.borderColor='var(--border-color)'">
+        <div>
+            <strong style="color: var(--text-primary);">{{ stock.symbol }}</strong><br>
+            <small style="color: var(--text-secondary);">{{ stock.name }}</small>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="color: var(--text-primary); font-weight: 500;">
+                {% if stock.current_price %}
+                    ₹{{ stock.current_price|round(2) }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </span>
+            <button 
+                class="btn btn-primary btn-small stock-add-btn" 
+                hx-post="{{ url('basket_stock_add', args=[basket_id]) }}"
+                hx-vals='{"stock_id": {{ stock.id }}}'
+                hx-target="#stock_holdings_table"
+                hx-swap="innerHTML"
+                hx-indicator="#add-stock-spinner-{{ stock.id }}"
+                hx-on::after-request="
+                    if(event.detail.successful) { 
+                        this.disabled = true; 
+                        this.textContent = 'Added ✓'; 
+                        this.style.backgroundColor = '#10b981';
+                        
+                        // Close modal after 800ms
+                        setTimeout(() => closeAddStockModal(), 800);
+                        
+                        // Show success message
+                        showMessage('Stock added successfully!', 'success');
+                    } else {
+                        // Show error message
+                        const errorMsg = event.detail.xhr?.responseText || 'Failed to add stock';
+                        showMessage(errorMsg, 'error');
+                    }
+                "
+                style="padding: 6px 14px; font-size: 0.85em; position: relative;">
+                Add
+                <span id="add-stock-spinner-{{ stock.id }}" class="htmx-indicator" style="position: absolute; right: -20px; top: 50%; transform: translateY(-50%);">
+                    <svg class="spinner" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="30" stroke-dashoffset="0">
+                            <animateTransform attributeName="transform" type="rotate" from="0 8 8" to="360 8 8" dur="1s" repeatCount="indefinite"/>
+                        </circle>
+                    </svg>
+                                </span>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}

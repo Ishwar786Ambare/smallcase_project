@@ -609,3 +609,116 @@ def recalculate_basket_weights(basket_id):
             'success': False,
             'message': f'Error recalculating basket weights: {str(e)}'
         }
+
+
+def add_stock_to_basket(basket_id, stock_id, quantity=0):
+    """
+    Add a stock to an existing basket with initial quantity of 0
+    
+    This function adds a stock to a basket and recalculates all weights:
+    - Adds the new BasketItem entry with 0 quantity
+    - Recalculates weight percentages for all stocks
+    
+    Args:
+        basket_id: ID of the basket
+        stock_id: ID of the stock to add
+        quantity: Initial quantity (default 0)
+    
+    Returns:
+        Dictionary with:
+            - success: Boolean indicating if addition was successful
+            - message: Success or error message
+            - basket: Updated basket object (if successful)
+            - basket_item: The newly created BasketItem (if successful)
+    """
+    from .models import Basket, BasketItem, Stock
+    
+    try:
+        # Get the basket
+        basket = Basket.objects.get(id=basket_id)
+        
+        # Get the stock
+        stock = Stock.objects.get(id=stock_id)
+        
+        # Check if stock already exists in basket
+        if BasketItem.objects.filter(basket=basket, stock=stock).exists():
+            return {
+                'success': False,
+                'message': f'{stock.symbol} is already in this basket.',
+                'basket': basket,
+                'basket_item': None
+            }
+        
+        # Fetch latest price if not available
+        if not stock.current_price:
+            price = fetch_stock_price(stock.symbol)
+            if price:
+                stock.current_price = Decimal(str(price))
+                stock.save()
+        
+        # If still no price, return error
+        if not stock.current_price or stock.current_price <= 0:
+            return {
+                'success': False,
+                'message': f'Cannot add {stock.symbol}: No price data available.',
+                'basket': basket,
+                'basket_item': None
+            }
+        
+        # Create new basket item with quantity 0
+        quantity = int(quantity)
+        allocated_amount = Decimal(str(quantity)) * stock.current_price
+        
+        basket_item = BasketItem.objects.create(
+            basket=basket,
+            stock=stock,
+            weight_percentage=Decimal('0'),  # Will be recalculated
+            allocated_amount=allocated_amount,
+            quantity=quantity,
+            purchase_price=stock.current_price
+        )
+        
+        # Recalculate weights for all stocks
+        all_items = basket.items.all()
+        total_allocated = sum(item.allocated_amount for item in all_items)
+        
+        if total_allocated > 0:
+            for item in all_items:
+                item.weight_percentage = (item.allocated_amount / total_allocated) * 100
+                item.save()
+            
+            # Update basket investment amount
+            basket.investment_amount = total_allocated
+            basket.save()
+        
+        return {
+            'success': True,
+            'message': f'Successfully added {stock.symbol} to basket.',
+            'basket': basket,
+            'basket_item': basket_item,
+            'new_investment_amount': float(total_allocated if total_allocated > 0 else basket.investment_amount)
+        }
+        
+    except Basket.DoesNotExist:
+        return {
+            'success': False,
+            'message': f'Basket with ID {basket_id} not found.',
+            'basket': None,
+            'basket_item': None
+        }
+    
+    except Stock.DoesNotExist:
+        return {
+            'success': False,
+            'message': f'Stock with ID {stock_id} not found.',
+            'basket': None,
+            'basket_item': None
+        }
+    
+    except Exception as e:
+        return {
+            'success': False,
+            'message': f'Error adding stock to basket: {str(e)}',
+            'basket': None,
+            'basket_item': None
+        }

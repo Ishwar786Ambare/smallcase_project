@@ -1,4 +1,9 @@
-<h2 class="section-title">Stock Holdings ({{ items|length }} stocks)</h2>
+<div class="stock-holdings-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h2 class="section-title" style="margin-bottom: 0;">Stock Holdings ({{ items|length }} stocks)</h2>
+    <button class="btn btn-primary" onclick="openAddStockModal()" id="add-stock-btn">
+        ➕ Add Stock
+    </button>
+</div>
 
 <table class="stocks-table">
     <thead>
@@ -102,6 +107,35 @@
         Click on the weight or quantity values to edit them. When you change one, the other will automatically adjust.
         Created on: {{ basket.created_at.strftime('%d %b %Y %H:%M') }}
     </p>
+</div>
+
+<!-- Add Stock Modal -->
+<div id="add-stock-modal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 1000;">
+    <div class="modal-content" style="background: var(--card-bg); border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); width: 100%; max-width: 500px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: var(--bg-body);">
+            <h3 style="margin: 0; font-size: 1.1em; font-weight: 600; color: var(--text-primary);">Add Stock to Basket</h3>
+            <button class="modal-close" onclick="closeAddStockModal()" style="background: transparent; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; padding: 4px; line-height: 1; border-radius: 4px;">×</button>
+        </div>
+        <div class="modal-body" style="padding: 24px; overflow-y: auto;">
+            <div style="margin-bottom: 16px;">
+                <input type="text" id="stock-search-input" placeholder="Search stocks..." 
+                    style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--input-bg); color: var(--text-primary); font-size: 0.95rem;"
+                    onkeyup="filterAvailableStocks()">
+            </div>
+            <div id="available-stocks-list" 
+                style="max-height: 300px; overflow-y: auto;"
+                hx-get="{{ url('basket_available_stocks', args=[basket.id]) }}"
+                hx-trigger="load"
+                hx-indicator="#stocks-loading">
+                <div id="stocks-loading" style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                    Loading stocks...
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-color); background: var(--bg-body);">
+            <button class="btn btn-secondary" onclick="closeAddStockModal()" style="padding: 10px 20px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--container-bg); color: var(--text-primary); cursor: pointer;">Cancel</button>
+        </div>
+    </div>
 </div>
 
 

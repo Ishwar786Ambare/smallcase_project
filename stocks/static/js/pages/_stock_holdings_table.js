@@ -75,3 +75,72 @@ function deleteStock(basketId, stockId, itemId, deleteUrl) {
         }
     }); // Added missing semicolon here and ensured the function closes properly
 }
+
+// ========================================
+// Add Stock Functionality with HTMX
+// ========================================
+
+function openAddStockModal() {
+    const modal = document.getElementById('add-stock-modal');
+    modal.style.display = 'flex';
+
+    // Clear search input
+    const searchInput = document.getElementById('stock-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // Load stocks using HTMX ajax
+    const stocksList = document.getElementById('available-stocks-list');
+    if (stocksList) {
+        // Show loading message
+        stocksList.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Loading stocks...</div>';
+
+        // Get the basket ID from the URL or data attribute
+        const basketId = document.querySelector('[data-basket-id]')?.dataset.basketId;
+
+        if (basketId) {
+            // Use HTMX ajax to load stocks
+            htmx.ajax('GET', `/basket/${basketId}/available-stocks/`, {
+                target: '#available-stocks-list',
+                swap: 'innerHTML'
+            });
+        }
+    }
+}
+
+function closeAddStockModal() {
+    const modal = document.getElementById('add-stock-modal');
+    modal.style.display = 'none';
+}
+
+function filterAvailableStocks() {
+    const searchTerm = document.getElementById('stock-search-input').value.toLowerCase();
+    const stockItems = document.querySelectorAll('#available-stocks-list .stock-item');
+
+    stockItems.forEach(item => {
+        const symbol = item.getAttribute('data-symbol');
+        const name = item.getAttribute('data-name');
+
+        if (symbol.includes(searchTerm) || name.includes(searchTerm)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function (event) {
+    const modal = document.getElementById('add-stock-modal');
+    if (event.target === modal) {
+        closeAddStockModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape') {
+        closeAddStockModal();
+    }
+});
