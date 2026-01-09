@@ -192,3 +192,259 @@ def contact_form_submit(request):
     }, status=405)
 
 
+# ============ OTP-Based Password Reset Views ============
+
+from django.http import JsonResponse
+from django.contrib.auth import get_user_model
+from django.views.decorators.http import require_http_methods
+from .otp_utils import OTPManager
+import json
+
+User = get_user_model()
+
+
+@require_http_methods(["POST"])
+def request_password_reset_otp(request):
+    """
+    Request OTP for password reset via email or SMS.
+    
+    POST data:
+        - identifier: email or phone number
+        - method: 'email' or 'sms'
+    
+    Returns:
+        JSON response with success status and message
+    """
+
+    try:
+    # Parse request data
+
+        data = request.POST.dict()
+        identifier = data.get('identifier', '').strip()
+        method = data.get('method', 'email').lower()
+
+        print(identifier, method)
+        if not identifier:
+            return JsonResponse({
+                'success': False,
+                'message': 'Email or phone number is required'
+            }, status=400)
+        
+        # Check if user exists
+        if method == 'email':
+            try:
+
+                from django.db.models import Q
+                user = User.objects.get(Q(email=identifier.lower()) | Q(username=identifier))
+            except User.DoesNotExist:
+                # Don't reveal if email exists (security)
+                return JsonResponse({
+                    'success': True,
+                    'message': 'If this email is registered, you will receive an OTP shortly.'
+                })
+        else:
+            # For SMS, check phone number (mobile_number field in User model)
+            try:
+                user = User.objects.get(mobile_number=identifier)
+            except User.DoesNotExist:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'If this phone number is registered, you will receive an OTP shortly.'
+                })
+            except AttributeError:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'SMS feature not configured. Please use email method.'
+                }, status=400)
+        
+        # Generate OTP
+        otp = OTPManager.generate_otp()
+        # otp = 123456
+        # Send OTP
+        try:
+            if method == 'email':
+                OTPManager.send_otp_email(identifier.lower(), otp, purpose='password_reset')
+                return JsonResponse({
+                    'success': True,
+                    'message': 'OTP sent to your email. Please check your inbox.',
+                    'identifier': identifier.lower()
+                })
+            else:
+                OTPManager.send_otp_sms(identifier, otp, purpose='password_reset')
+                return JsonResponse({
+                    'success': True,
+                    'message': 'OTP sent to your phone. Please check your messages.',
+                    'identifier': identifier
+                })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def verify_password_reset_otp(request):
+    """
+    Verify OTP for password reset.
+    
+    POST data:
+        - identifier: email or phone number
+        - otp: The OTP code
+    
+    Returns:
+        JSON response with success status and reset token
+    """
+    try:
+        # Parse request data
+        data = request.POST.dict()
+  
+        identifier = data.get('identifier', '').strip()
+        otp = data.get('otp', '').strip()
+        
+        print(identifier, otp)
+
+        if not identifier or not otp:
+            return JsonResponse({
+                'success': False,
+                'message': 'Identifier and OTP are required'
+            }, status=400)
+        
+        # Verify OTP
+        result = OTPManager.verify_otp(identifier, otp, otp_type='password_reset')
+        print('result',result)
+        if result['success']:
+            # Generate a temporary reset token
+            from django.core.cache import cache
+            import secrets
+            
+            reset_token = secrets.token_urlsafe(32)
+            
+            # Store the reset token with identifier mapping (valid for 10 minutes)
+            cache.set(f'password_reset_token_{reset_token}', identifier, 600)
+            
+            return JsonResponse({
+                'success': True,
+                'message': result['message'],
+                'reset_token': reset_token
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': result['message']
+            }, status=400)
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["POST"])
+def reset_password_with_token(request):
+    """
+    Reset password using verified OTP token.
+    
+    POST data:
+        - reset_token: Token from OTP verification
+        - new_password: New password
+        - confirm_password: Password confirmation
+    
+    Returns:
+        JSON response with success status
+    """
+    try:
+        # Parse request data
+        data = request.POST.dict()
+        print('data', data)
+        reset_token = data.get('reset_token', '').strip()
+        new_password = data.get('new_password', '')
+        confirm_password = data.get('confirm_password', '')
+        print('---------------------------------------------')
+        print(reset_token, new_password, confirm_password)
+        print('----------------------------------------------')
+        if not reset_token or not new_password or not confirm_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'All fields are required'
+            }, status=400)
+        
+        if new_password != confirm_password:
+            return JsonResponse({
+                'success': False,
+                'message': 'Passwords do not match'
+            }, status=400)
+        
+        if len(new_password) < 8:
+            return JsonResponse({
+                'success': False,
+                'message': 'Password must be at least 8 characters'
+            }, status=400)
+        
+        # Verify reset token
+        from django.core.cache import cache
+        
+        identifier = cache.get(f'password_reset_token_{reset_token}')
+        
+        if not identifier:
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid or expired reset token. Please request a new OTP.'
+            }, status=400)
+        
+        # Find user
+        try:
+            # Try email first
+            try:
+                from django.db.models import Q
+                user = User.objects.get(Q(email=identifier) | Q(username=identifier))
+            except User.DoesNotExist:
+                # Try mobile number
+                user = User.objects.get(mobile_number=identifier)
+        except User.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'User not found'
+            }, status=404)
+        
+        # Update password
+        from django.contrib.auth.hashers import make_password
+        
+        user.password = make_password(new_password)
+        user.save()
+        
+        # Clear reset token
+        cache.delete(f'password_reset_token_{reset_token}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Password reset successfully. You can now login with your new password.'
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'An error occurred: {str(e)}'
+        }, status=500)
+
+
+from django.views.decorators.csrf import ensure_csrf_cookie
+
+@ensure_csrf_cookie
+def forgot_password(request):
+    """
+    Display forgot password page.
+    """
+    if request.user.is_authenticated:
+        return redirect('home')
+    
+    context = {'csrf_token': get_token(request)}
+    return render(request, 'user/forgot_password.j2', context)
+

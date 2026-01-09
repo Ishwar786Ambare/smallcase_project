@@ -48,6 +48,8 @@ class User(AbstractUser):
     # Username is auto-generated from email if not provided
     REQUIRED_FIELDS = []
     
+    mobile_number = models.CharField(max_length=15, blank=True, null=True)
+
     # Use custom manager
     objects = UserManager()
     

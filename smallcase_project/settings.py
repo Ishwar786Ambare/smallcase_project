@@ -53,6 +53,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    # Django Sites Framework (required by Allauth)
+    'django.contrib.sites',
+    
+    # Django Allauth - Authentication & Social Login
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
+    
+    # Django OTP for Two-Factor Authentication
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    
     'channels',  # Django Channels for real-time WebSocket messaging
     'corsheaders',
     'django_htmx',  # Django HTMX integration
@@ -71,6 +86,10 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django_htmx.middleware.HtmxMiddleware',  # HTMX middleware for request.htmx
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    
+    # Django Allauth - Account management middleware
+    'allauth.account.middleware.AccountMiddleware',
+    
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -252,6 +271,7 @@ LOGOUT_REDIRECT_URL = 'user:login'
 AUTHENTICATION_BACKENDS = [
     'user.backends.EmailOrUsernameBackend',  # Custom backend in user app
     'django.contrib.auth.backends.ModelBackend',  # Default backend (fallback)
+    'allauth.account.auth_backends.AuthenticationBackend',  # Django Allauth backend
 ]
 
 # ============ Session Configuration ============
@@ -298,3 +318,148 @@ GROQ_MODEL = os.environ.get('GROQ_MODEL', 'llama-3.3-70b-versatile')
 # Get API key from: https://makersuite.google.com/app/apikey
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+
+
+# ============ Django Sites Framework ============
+SITE_ID = 1
+
+
+# ============ Django Allauth Configuration ============
+
+# Account Settings
+ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Login with email instead of username
+ACCOUNT_EMAIL_REQUIRED = True  # Email is required
+ACCOUNT_USERNAME_REQUIRED = False  # Username is optional
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # Email verification is mandatory ('mandatory', 'optional', or 'none')
+ACCOUNT_UNIQUE_EMAIL = True  # Ensure email addresses are unique
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True  # Auto-login after email confirmation
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3  # Email confirmation link expires in 3 days
+
+# Login/Logout Settings
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5  # Max login attempts before lockout
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300  # Lockout duration in seconds (5 minutes)
+LOGIN_REDIRECT_URL = '/'  # Redirect after successful login
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # Redirect after logout
+ACCOUNT_LOGOUT_ON_GET = False  # Require POST for logout (security)
+
+# Password Settings
+ACCOUNT_PASSWORD_MIN_LENGTH = 8  # Minimum password length
+
+# Session Settings
+ACCOUNT_SESSION_REMEMBER = True  # Remember user session
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True  # Ask for password twice during signup
+
+# Email Confirmation
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True  # Confirm email on GET request (clicking link)
+
+# Custom Adapter (for custom logic)
+ACCOUNT_ADAPTER = 'user.adapters.CustomAccountAdapter'
+SOCIALACCOUNT_ADAPTER = 'user.adapters.CustomSocialAccountAdapter'
+
+# Social Account Settings
+SOCIALACCOUNT_AUTO_SIGNUP = True  # Automatically signup users with social accounts
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Skip email verification for social accounts
+SOCIALACCOUNT_QUERY_EMAIL = True  # Ask for email if not provided by social provider
+
+# Social Account Providers Configuration
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID', ''),
+            'secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    },
+    'github': {
+        'SCOPE': [
+            'user',
+            'user:email',
+        ],
+        'APP': {
+            'client_id': os.environ.get('GITHUB_OAUTH_CLIENT_ID', ''),
+            'secret': os.environ.get('GITHUB_OAUTH_CLIENT_SECRET', ''),
+            'key': ''
+        }
+    }
+}
+
+
+# ============ Email Configuration ============
+
+# Email Backend
+# For development, use console backend (prints emails to console)
+# For production, use SMTP backend
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend'  # Default to console for development
+)
+
+
+# Gmail SMTP Configuration
+# To use Gmail:
+# 1. Enable 2-Step Verification in your Google Account
+# 2. Generate an App Password: https://myaccount.google.com/apppasswords
+# 3. Set EMAIL_BACKEND to 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+SERVER_EMAIL = os.environ.get('SERVER_EMAIL', EMAIL_HOST_USER)
+
+# Alternative: SendGrid Configuration
+# To use SendGrid:
+# 1. Sign up at https://sendgrid.com/ (100 emails/day free)
+# 2. Get your API key
+# 3. Set these environment variables:
+#    EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+#    EMAIL_HOST=smtp.sendgrid.net
+#    EMAIL_PORT=587
+#    EMAIL_USE_TLS=True
+#    EMAIL_HOST_USER=apikey
+#    EMAIL_HOST_PASSWORD=your_sendgrid_api_key
+
+
+# ============ SMS Configuration (Twilio) ============
+
+# Twilio Configuration
+# Sign up at https://www.twilio.com/ (free trial with $15 credit)
+# Get your Account SID and Auth Token from the console
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')  # Your Twilio phone number
+
+# Alternative: MSG91 (Good for India)
+MSG91_AUTH_KEY = os.environ.get('MSG91_AUTH_KEY', '')
+MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', '')
+
+
+# ============ OTP Configuration ============
+
+# OTP Settings
+OTP_TOTP_ISSUER = 'Smallcase Project'  # Name shown in authenticator apps
+OTP_LOGIN_URL = '/login/'  # Redirect to login page after OTP verification
+
+
+# ============ Custom Password Reset with OTP ============
+
+# OTP expiry time (in seconds)
+OTP_EXPIRY_TIME = 300  # 5 minutes
+
+# OTP length
+OTP_LENGTH = 6
+
+# Max OTP attempts
+MAX_OTP_ATTEMPTS = 3
+
+# OTP cooldown (prevent spam)
+OTP_COOLDOWN_TIME = 60  # 1 minute between OTP requests
+

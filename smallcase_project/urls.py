@@ -21,6 +21,9 @@ from django.views.i18n import set_language
 
 urlpatterns = [
     path('i18n/setlang/', set_language, name='set_language'),  # Language switcher
+    
+    # Django Allauth URLs (outside i18n_patterns for consistency)
+    path('accounts/', include('allauth.urls')),
 ]
 
 urlpatterns += i18n_patterns(

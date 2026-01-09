@@ -1,4 +1,4 @@
-# stocks/views.py - Django HTMX Integration with CSRF
+# stocks/views.py
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -694,12 +694,20 @@ def basket_stock_delete(request, basket_id, stock_id):
     })
 
 
-@login_required
+@csrf_exempt
 def basket_stock_add(request, basket_id):
-    """Add a stock to basket and update the table without page reload"""
-    from django.http import JsonResponse, HttpResponse
+    """Add a stock to basket via AJAX and return updated HTML"""
+    from django.http import JsonResponse
+    from django.template.loader import get_template
     from .utils import add_stock_to_basket
-    
+    import json
+    print('---------------------')
+    print(request.body, basket_id)
+    print('---------------------')
+    print(request.POST)
+    print('---------------------')
+    print(request.method)
+    print('---------------------')
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method'})
     
@@ -707,21 +715,17 @@ def basket_stock_add(request, basket_id):
     basket = get_object_or_404(Basket, id=basket_id, user=request.user)
     
     try:
-        # Get stock_id from POST data
-        stock_id = request.POST.get('stock_id')
+        # Parse JSON body
+        data = json.loads(request.body) if request.body else request.POST
+        stock_id = data.get('stock_id')
         
         if not stock_id:
             return JsonResponse({'success': False, 'error': 'Stock ID is required'})
         
-        # Use the utility function to add the stock with quantity=0
+        # Use the utility function to add the stock
         result = add_stock_to_basket(basket_id, stock_id, quantity=0)
         
         if not result['success']:
-            if request.htmx:
-                return HttpResponse(
-                    f'<div style="color: #ef4444; padding: 10px;">{result["message"]}</div>', 
-                    status=400
-                )
             return JsonResponse(result)
         
         # Clear caches
@@ -732,49 +736,51 @@ def basket_stock_add(request, basket_id):
             f'performance_{basket.id}'
         ])
         
-        # For HTMX requests, render the updated table using Jinja2
-        if request.htmx:
-            # Refresh basket from database
-            basket.refresh_from_db()
-            
-            # Get updated items
-            items = basket.items.select_related('stock').all()
-            total_current_value = basket.get_total_value()
-            total_profit_loss = basket.get_profit_loss()
-            
-            # Render the Jinja2 template
-            from jinja2 import Environment
-            from django.template import engines
-            
-            jinja_env = engines['jinja2'].env
-            template = jinja_env.get_template('stocks/_stock_holdings_table.j2')
-            
-            html = template.render({
-                'basket': basket,
-                'items': items,
-                'total_current_value': total_current_value,
-                'total_profit_loss': total_profit_loss,
-                'url': lambda name, args=None: f'/{name}/' if not args else f'/{name}/{"/".join(map(str, args))}/',
-            })
-            
-            return HttpResponse(html)
+        # Refresh basket from database
+        basket.refresh_from_db()
         
-        # For non-HTMX requests
+        # Get updated items for rendering
+        items = basket.items.select_related('stock').all()
+        
+        total_current_value = basket.get_total_value()
+        total_profit_loss = basket.get_profit_loss()
+        profit_loss_percentage = basket.get_profit_loss_percentage()
+        
+        # Render the updated stock holdings table
+        stock_holdings_template = get_template("stocks/_stock_holdings_table.j2")
+        
+        holdings_context = {
+            'basket': basket,
+            'items': items,
+            'total_current_value': total_current_value,
+            'total_profit_loss': total_profit_loss,
+        }
+        
+        stock_holdings_html = stock_holdings_template.render(holdings_context)
+        
+        # Return JSON response with new HTML and metrics
+        print('---------------------')
+        print(reverse('basket_stock_add', args=[basket.id]))
+        print('---------------------')
         return JsonResponse({
             'success': True,
             'message': result['message'],
+            'stock_holdings_html': stock_holdings_html,
+            'new_investment_amount': float(basket.investment_amount),
+            'total_current_value': total_current_value,
+            'total_profit_loss': total_profit_loss,
+            'profit_loss_percentage': profit_loss_percentage,
+            # URL for basket_stock_add view
+            'add_stock_url': reverse('basket_stock_add', args=[basket.id])
         })
         
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'})
     except Exception as e:
-        if request.htmx:
-            return HttpResponse(
-                f'<div style="color: #ef4444; padding: 10px;">Error: {str(e)}</div>', 
-                status=500
-            )
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-@login_required
+@csrf_exempt
 def basket_get_available_stocks(request, basket_id):
     """Get stocks that are not in the current basket"""
     basket = get_object_or_404(Basket, id=basket_id, user=request.user)
@@ -785,22 +791,6 @@ def basket_get_available_stocks(request, basket_id):
     # Get all available stocks not in basket
     available_stocks = Stock.objects.exclude(id__in=basket_stock_ids).order_by('symbol')
     
-    # For HTMX requests, return HTML
-    if request.htmx:
-        from django.template import engines
-        from django.http import HttpResponse
-        
-        # Get Django template engine explicitly (not Jinja2)
-        django_engine = engines['django']
-        template = django_engine.get_template('_available_stocks_list_django.html')
-        html = template.render({
-            'stocks': available_stocks,
-            'basket_id': basket_id,
-        }, request)
-        
-        return HttpResponse(html)
-    
-    # For AJAX/JSON requests (backward compatibility)
     stocks_data = [{
         'id': stock.id,
         'symbol': stock.symbol,
@@ -808,11 +798,29 @@ def basket_get_available_stocks(request, basket_id):
         'current_price': float(stock.current_price) if stock.current_price else None
     } for stock in available_stocks]
     
+
+
+    # Return JSON response with new HTML and metrics
+    print('---------------------')
+
     from django.urls import reverse
+    print(reverse('basket_stock_add', args=[basket.id]))
+    print('---------------------')
+    # URL for basket_stock_add view
+    add_stock_url = reverse('basket_stock_add', args=[basket.id])
+    print('---------------------')
+    # URL for basket_stock_add view
     return JsonResponse({
         'success': True,
         'stocks': stocks_data,
-        'add_stock_url': reverse('basket_stock_add', args=[basket_id])
+        'add_stock_url': add_stock_url
+    })
+
+
+    return JsonResponse({
+        'success': True,
+        'stocks': stocks_data,
+        'add_stock_url': reversed('basket_stock_add', args=[basket.id])
     })
 
 

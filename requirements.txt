@@ -66,3 +66,15 @@ pydantic
 
 protobuf>=3.20.2,<6.0.0
 polib==1.2.0
+
+# Django Allauth - Authentication & Social Login
+django-allauth
+
+# HTMX Integration
+django-htmx==1.21.0
+
+# OTP and SMS
+pyotp
+twilio
+django-otp
+qrcode
