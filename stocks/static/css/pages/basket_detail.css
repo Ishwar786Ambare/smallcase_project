@@ -54,6 +54,7 @@ h1 {
     border-color: var(--primary-color);
 }
 
+
 .stat-label {
     color: var(--text-secondary);
     font-size: 0.875rem;
